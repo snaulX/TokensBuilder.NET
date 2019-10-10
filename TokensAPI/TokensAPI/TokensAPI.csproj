@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <Company>World of Legends</Company>
+    <Authors>snaulX</Authors>
+    <Version>0.9.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="tokens\" />
+    <Folder Include="identifers\" />
+  </ItemGroup>
+
+</Project>
