@@ -6,5 +6,8 @@ namespace TokensAPI
 {
     public class Identifer
     {
+        public Identifer()
+        {
+        }
     }
 }
