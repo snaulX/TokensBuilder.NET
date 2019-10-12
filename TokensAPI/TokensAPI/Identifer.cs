@@ -4,10 +4,8 @@ using System.Text;
 
 namespace TokensAPI
 {
-    public class Identifer
+    public abstract class Identifer
     {
-        public Identifer()
-        {
-        }
+        public abstract void Parse(string input);
     }
 }

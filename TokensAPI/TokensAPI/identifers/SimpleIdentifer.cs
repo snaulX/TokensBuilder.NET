@@ -6,15 +6,16 @@ namespace TokensAPI.identifers
 {
     public class SimpleIdentifer : Identifer
     {
-        public string identifer = "";
+        public string identifer;
 
-        public SimpleIdentifer(): base()
+        public SimpleIdentifer()
         {
+            identifer = "";
         }
 
-        public SimpleIdentifer(string identifer) : this()
+        public SimpleIdentifer(string identifer): this()
         {
-            this.identifer = identifer;
+            if (Check(identifer)) this.identifer = identifer;
         }
 
         public static bool Check(string input)
@@ -24,6 +25,11 @@ namespace TokensAPI.identifers
                 if (!char.IsLetterOrDigit(c)) return false;
             }
             return true;
+        }
+
+        public override void Parse(string input)
+        {
+            if (Check(input)) identifer = input;
         }
     }
 }
