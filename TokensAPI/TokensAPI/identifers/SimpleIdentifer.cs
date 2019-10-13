@@ -6,8 +6,6 @@ namespace TokensAPI.identifers
 {
     public class SimpleIdentifer : Identifer
     {
-        public string identifer;
-
         public SimpleIdentifer()
         {
             identifer = "";
@@ -18,7 +16,7 @@ namespace TokensAPI.identifers
             if (Check(identifer)) this.identifer = identifer;
         }
 
-        public static bool Check(string input)
+        public override bool Check(string input)
         {
             foreach (char c in input)
             {
