@@ -24,7 +24,16 @@ namespace TokensAPI.identifers
 
         public override void Parse(string input)
         {
-            throw new NotImplementedException();
+            if (Check(input))
+            {
+                input = input.Substring(1, input.Length - 2);
+                string[] ids = input.Split(' ');
+                token = Main.GetToken(ids[0]);
+            }
+            else
+            {
+                //pass
+            }
         }
     }
 }
