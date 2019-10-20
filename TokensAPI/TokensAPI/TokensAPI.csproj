@@ -7,9 +7,12 @@
     <Version>0.9.0</Version>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>C:\Users\User\Desktop\World of Legends\TokensBuilder\tokensbuilder-dotnet\TokensBuilder\TokensBuilder\TokensBuilder\bin\</OutputPath>
+  </PropertyGroup>
+
   <ItemGroup>
     <Folder Include="tokens\" />
-    <Folder Include="identifers\" />
   </ItemGroup>
 
 </Project>
