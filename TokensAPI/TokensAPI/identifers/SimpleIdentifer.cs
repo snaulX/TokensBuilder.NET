@@ -29,5 +29,7 @@ namespace TokensAPI.identifers
         {
             if (Check(input)) identifer = input;
         }
+
+        public string GetValue() => identifer;
     }
 }
