@@ -33,8 +33,8 @@ namespace TokensBuilder
                 }
             }
         }
-		
-		//ALL CODE IN THIS METHOD IS A TEST
+
+        //ALL CODE IN THIS METHOD IS A TEST
         public static void Build(string assembly_name, string code)
         {
             AssemblyName aName = new AssemblyName(assembly_name);
@@ -46,7 +46,7 @@ namespace TokensBuilder
             // For a single-module assembly, the module name is usually
             // the assembly name plus an extension.
             ModuleBuilder mb =
-                ab.DefineDynamicModule(aName.Name, aName.Name + ".exe");
+                ab.DefineDynamicModule(aName.Name, aName.Name + ".dll");
 
             TypeBuilder tb = mb.DefineType(
                 "MyDynamicType",
@@ -176,6 +176,13 @@ namespace TokensBuilder
             methIL.Emit(OpCodes.Mul);
             methIL.Emit(OpCodes.Ret);
 
+            /*Create entry point method "Main"
+            MethodBuilder mainBuilder = tb.DefineMethod("Main", MethodAttributes.Static, typeof(void),
+                new Type[] { typeof(string[]) });
+            ILGenerator mg = mainBuilder.GetILGenerator();
+            mg.Emit(OpCodes.Call, Type.GetType("Console").GetRuntimeMethod("WriteLine", new Type[] { typeof(string) }));
+            ab.SetEntryPoint(mainBuilder);*/
+
             // Finish the type.
             Type t = tb.CreateType();
 
@@ -185,7 +192,7 @@ namespace TokensBuilder
             // examine the assembly. You can also write a program that has
             // a reference to the assembly, and use the MyDynamicType type.
             // 
-            ab.Save(aName.Name + ".exe");
+            ab.Save(aName.Name + ".dll");
 
             // Because AssemblyBuilderAccess includes Run, the code can be
             // executed immediately. Start by getting reflection objects for
