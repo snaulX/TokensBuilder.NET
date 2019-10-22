@@ -9,24 +9,11 @@ namespace TokensAPI
     {
         public static Dictionary<string, Token> tokens
         {
-            get => new Dictionary<string, Token>();
-        }
-
-        public static Token GetToken(string name)
-        {
-            try
+            get => 
+                new Dictionary<string, Token>
             {
-                return tokens[name];
-            }
-            catch (KeyNotFoundException)
-            {
-                return null; //it`s a pass
-            }
-        }
 
-        public static Identifer GetIdentifer(string name)
-        {
-            return new SimpleIdentifer(name);
+            };
         }
     }
 }

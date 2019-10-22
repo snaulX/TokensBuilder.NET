@@ -22,5 +22,6 @@ namespace TokensAPI
             else if (simpleIdentifer.Check(input)) return new SimpleIdentifer(input);
             else throw new ArgumentNullException($"{input} is not identifer");
         }
+        public Identifer Null { get => new SimpleIdentifer(); }
     }
 }

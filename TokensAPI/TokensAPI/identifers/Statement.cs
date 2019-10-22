@@ -28,7 +28,7 @@ namespace TokensAPI.identifers
             {
                 input = input.Substring(1, input.Length - 2);
                 string[] ids = input.Split(' ');
-                token = Main.GetToken(ids[0]);
+                token = Token.GetToken(ids[0]);
             }
             else
             {
