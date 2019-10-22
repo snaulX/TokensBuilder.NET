@@ -55,6 +55,10 @@
         PUBLIC,
         PRIVATE,
         PROTECTED,
-        OPERATOR
+        OPERATOR,
+        /// <summary>
+        /// Token does not exist. Just none
+        /// </summary>
+        NULL
     }
 }
