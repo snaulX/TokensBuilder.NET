@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TokensAPI.identifers
+﻿namespace TokensAPI.identifers
 {
     public class SimpleIdentifer : Identifer
     {

@@ -11,8 +11,4 @@
     <OutputPath>C:\Users\User\Desktop\World of Legends\TokensBuilder\tokensbuilder-dotnet\TokensBuilder\TokensBuilder\TokensBuilder\bin\</OutputPath>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="tokens\" />
-  </ItemGroup>
-
 </Project>

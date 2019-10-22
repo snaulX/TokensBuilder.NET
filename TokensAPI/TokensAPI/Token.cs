@@ -1,22 +1,60 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace TokensAPI
+﻿namespace TokensAPI
 {
-    public abstract class Token
+    public enum Token
     {
-        public abstract Identifer Parse(params Identifer[] identifers);
-
-        public static Token GetToken(string name)
-        {
-            try
-            {
-                return Main.tokens[name];
-            }
-            catch (KeyNotFoundException)
-            {
-                throw new KeyNotFoundException($"Token by name {name} not found"); //it`s really genial
-            }
-        }
+        USE,
+        WRITEVAR,
+        NEWCLASS,
+        NEWVAR,
+        NEWFUNC,
+        END,
+        GETCLASS,
+        GETVAR,
+        GETFUNC,
+        RUNFUNC,
+        WHILE,
+        FOR,
+        FOREACH,
+        BREAK,
+        CONTINUE,
+        RETURN,
+        IF,
+        ELSE,
+        ELIF,
+        GOTO,
+        LABEL,
+        YIELD,
+        GETLINK,
+        WRITEINLINK,
+        NEWSTRUCT,
+        NEWINTERFACE,
+        NEWENUM,
+        NEWMODULE,
+        NEWCONSTRUCTOR,
+        NEWATTRIBUTE,
+        GETATTRIBUTE,
+        GETCONSTRUCTOR,
+        OPCODEADD,
+        NEWEVENT,
+        GETEVENT,
+        TRY,
+        CATCH,
+        IMPLEMENTS,
+        THROW,
+        CALLCONSTRUCTOR,
+        ABSTRACT,
+        STATIC,
+        OVERRIDE,
+        GET,
+        SET,
+        TYPEOF,
+        CONST,
+        INTERNAL,
+        SEALED,
+        EXTERNAL,
+        PUBLIC,
+        PRIVATE,
+        PROTECTED,
+        OPERATOR
     }
 }

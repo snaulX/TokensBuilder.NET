@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using TokensAPI.identifers;
 
 namespace TokensAPI
 {
     public static class Main
     {
-        public static Dictionary<string, Token> tokens
+        public static Token GetToken(string name)
         {
-            get => 
-                new Dictionary<string, Token>
+            try
             {
-
-            };
+                return (Token) Enum.Parse(typeof(Token), name);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException($"Token by name {name} not found"); //it`s really genial
+            }
         }
     }
 }
