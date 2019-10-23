@@ -9,9 +9,11 @@ namespace TokensBuilder
 {
     public class TokensBuilder
     {
+        public static AssemblyBuilder ab;
+
         public static string info
         {
-            get => "TokensBuilder\n" +
+            get => "TokensBuilder by snaulX\n" +
                 $"Version - {Assembly.GetExecutingAssembly().GetName().Version}\n" +
                 "For get info write \"TokensBuilder -info\" in your command line";
         }
@@ -67,8 +69,7 @@ namespace TokensBuilder
         public static void Build(string assembly_name, List<Expression> expressions)
         {
             AssemblyName aName = new AssemblyName(assembly_name);
-            AssemblyBuilder ab =
-                AppDomain.CurrentDomain.DefineDynamicAssembly(
+            ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     aName,
                     AssemblyBuilderAccess.RunAndSave);
         }
@@ -83,6 +84,135 @@ namespace TokensBuilder
         {
             token = Token.NULL;
             arguments = new List<Identifer>();
+        }
+
+        public void Parse()
+        {
+            switch (token)
+            {
+                case Token.NULL:
+                    break;
+                case Token.USE:
+                    break;
+                case Token.WRITEVAR:
+                    break;
+                case Token.NEWCLASS:
+                    break;
+                case Token.NEWVAR:
+                    break;
+                case Token.NEWFUNC:
+                    break;
+                case Token.END:
+                    break;
+                case Token.GETCLASS:
+                    break;
+                case Token.GETVAR:
+                    break;
+                case Token.GETFUNC:
+                    break;
+                case Token.RUNFUNC:
+                    break;
+                case Token.WHILE:
+                    break;
+                case Token.FOR:
+                    break;
+                case Token.FOREACH:
+                    break;
+                case Token.BREAK:
+                    break;
+                case Token.CONTINUE:
+                    break;
+                case Token.RETURN:
+                    break;
+                case Token.IF:
+                    break;
+                case Token.ELSE:
+                    break;
+                case Token.ELIF:
+                    break;
+                case Token.GOTO:
+                    break;
+                case Token.LABEL:
+                    break;
+                case Token.YIELD:
+                    break;
+                case Token.GETLINK:
+                    break;
+                case Token.WRITEINPOINTER:
+                    break;
+                case Token.NEWSTRUCT:
+                    break;
+                case Token.NEWINTERFACE:
+                    break;
+                case Token.NEWENUM:
+                    break;
+                case Token.NEWMODULE:
+                    break;
+                case Token.NEWCONSTRUCTOR:
+                    break;
+                case Token.NEWATTRIBUTE:
+                    break;
+                case Token.GETATTRIBUTE:
+                    break;
+                case Token.GETCONSTRUCTOR:
+                    break;
+                case Token.OPCODEADD:
+                    break;
+                case Token.NEWEVENT:
+                    break;
+                case Token.GETEVENT:
+                    break;
+                case Token.TRY:
+                    break;
+                case Token.CATCH:
+                    break;
+                case Token.IMPLEMENTS:
+                    break;
+                case Token.THROW:
+                    break;
+                case Token.CALLCONSTRUCTOR:
+                    break;
+                case Token.ABSTRACT:
+                    break;
+                case Token.STATIC:
+                    break;
+                case Token.OVERRIDE:
+                    break;
+                case Token.GET:
+                    break;
+                case Token.SET:
+                    break;
+                case Token.TYPEOF:
+                    break;
+                case Token.CONST:
+                    break;
+                case Token.INTERNAL:
+                    break;
+                case Token.SEALED:
+                    break;
+                case Token.EXTERNAL:
+                    break;
+                case Token.PUBLIC:
+                    break;
+                case Token.PRIVATE:
+                    break;
+                case Token.PROTECTED:
+                    break;
+                case Token.OPERATOR:
+                    break;
+                case Token.ASYNC:
+                    break;
+                case Token.AWAIT:
+                    break;
+                case Token.SWITCH:
+                    break;
+                case Token.CASE:
+                    break;
+                case Token.DEFAULT:
+                    break;
+                case Token.NEWPOINTER:
+                    break;
+            }
         }
     }
 }
