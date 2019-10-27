@@ -26,6 +26,6 @@
             if (Check(input)) identifer = input;
         }
 
-        public string GetValue() => identifer;
+        public override string GetValue() => identifer;
     }
 }

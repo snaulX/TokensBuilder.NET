@@ -22,6 +22,6 @@ namespace TokensAPI.identifers
             if (Check(input)) identifer = input;
         }
 
-        public string GetValue() => identifer.Remove(0, 1).Remove(identifer.Length - 2);
+        public override string GetValue() => identifer.Remove(0, 1).Remove(identifer.Length - 2);
     }
 }

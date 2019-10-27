@@ -23,5 +23,7 @@ namespace TokensAPI
             else throw new ArgumentNullException($"{input} is not identifer");
         }
         public Identifer Null { get => new SimpleIdentifer(); }
+        public abstract string GetValue();
+        public override string ToString() => GetValue();
     }
 }

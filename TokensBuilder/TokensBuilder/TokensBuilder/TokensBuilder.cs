@@ -4,6 +4,7 @@ using System.Reflection;
 using System.IO;
 using TokensAPI;
 using System.Collections.Generic;
+using System.Resources;
 
 namespace TokensBuilder
 {
@@ -91,8 +92,23 @@ namespace TokensBuilder
             switch (token)
             {
                 case Token.NULL:
+                    //nothing
                     break;
                 case Token.USE:
+                    Identifer id = arguments[0];
+                    if (id is TokensAPI.identifers.Array)
+                    {
+                        ResourceWriter writer = (ResourceWriter)TokensBuilder.ab.DefineResource("ArrayLibs", "Library", "ArrayLibs.res");
+                        foreach (Identifer ide in ((TokensAPI.identifers.Array) id).elements)
+                        {
+                            writer.AddResource(ide.GetValue(), Assembly.LoadFrom(Path.GetFullPath(ide.GetValue())));
+                        }
+                    }
+                    else
+                    {
+                        ResourceWriter writer = (ResourceWriter)TokensBuilder.ab.DefineResource(id.GetValue(), "Library", id.GetValue() + ".res");
+                        writer.AddResource(id.GetValue(), Assembly.LoadFrom(Path.GetFullPath(id.GetValue())));
+                    }
                     break;
                 case Token.WRITEVAR:
                     break;
@@ -147,6 +163,7 @@ namespace TokensBuilder
                 case Token.NEWENUM:
                     break;
                 case Token.NEWMODULE:
+                    TokensBuilder.ab.DefineDynamicModule(arguments[0].GetValue());
                     break;
                 case Token.NEWCONSTRUCTOR:
                     break;

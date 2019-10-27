@@ -6,6 +6,9 @@
         /// Token does not exist. Just none
         /// </summary>
         NULL,
+        /// <summary>
+        /// Copy all modules and its contents from assembly and add to this assembly
+        /// </summary>
         USE,
         /// <summary>
         /// Set to varible new value
@@ -103,13 +106,37 @@
         /// Create structure
         /// </summary>
         NEWSTRUCT,
+        /// <summary>
+        /// Create interface
+        /// </summary>
         NEWINTERFACE,
+        /// <summary>
+        /// Create enumeration
+        /// </summary>
         NEWENUM,
+        /// <summary>
+        /// Create module
+        /// </summary>
         NEWMODULE,
+        /// <summary>
+        /// Create constructor
+        /// </summary>
         NEWCONSTRUCTOR,
+        /// <summary>
+        /// Create attribute
+        /// </summary>
         NEWATTRIBUTE,
+        /// <summary>
+        /// Find and get attribute
+        /// </summary>
         GETATTRIBUTE,
+        /// <summary>
+        /// Find and get constructor
+        /// </summary>
         GETCONSTRUCTOR,
+        /// <summary>
+        /// Write OpCode to block
+        /// </summary>
         OPCODEADD,
         NEWEVENT,
         GETEVENT,
@@ -137,6 +164,7 @@
         SWITCH,
         CASE,
         DEFAULT,
-        NEWPOINTER
+        NEWPOINTER,
+        STARTBLOCK
     }
 }
