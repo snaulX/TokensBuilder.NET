@@ -22,8 +22,6 @@ namespace TokensAPI.identifers
 
         public override bool Check(string input) => input.StartsWith('[') && input.EndsWith(']');
 
-        public override string GetValue() => identifer;
-
         public override void Parse(string input)
         {
             if (Check(input))

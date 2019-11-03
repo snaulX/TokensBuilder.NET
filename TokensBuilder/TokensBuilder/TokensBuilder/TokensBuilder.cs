@@ -4,13 +4,22 @@ using System.Reflection;
 using System.IO;
 using TokensAPI;
 using System.Collections.Generic;
-using System.Resources;
+using System.CodeDom.Compiler;
 
 namespace TokensBuilder
 {
-    public class TokensBuilder
+    public enum OutputType
     {
+        ConsoleApp,
+        ConsoleLibrary
+    }
+
+    public static class TokensBuilder
+    {
+        public static AppDomain cd;
         public static AssemblyBuilder ab;
+        public static MethodBuilder main_method;
+        public static CompilerParameters cp = new CompilerParameters();
 
         public static string info
         {
@@ -69,10 +78,21 @@ namespace TokensBuilder
 
         public static void Build(string assembly_name, List<Expression> expressions)
         {
+            AppDomainSetup ads = new AppDomainSetup();
+            ads.ApplicationName = assembly_name + "TokensApplication";
+            cd = AppDomain.CreateDomain("CompilerDomain");
             AssemblyName aName = new AssemblyName(assembly_name);
-            ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
+            ab = cd.DefineDynamicAssembly(
                     aName,
                     AssemblyBuilderAccess.RunAndSave);
+            ModuleBuilder main_module = ab.DefineDynamicModule("main");
+            TypeBuilder main_type = main_module.DefineType("Main");
+            main_type.CreateType();
+            main_method = main_type.DefineMethod("Main", MethodAttributes.Static, CallingConventions.Any);
+            for (int i = 0; i < expressions.Count; i++)
+            {
+                main_method = expressions[i].Parse(main_method);
+            }
         }
     }
 
@@ -87,27 +107,25 @@ namespace TokensBuilder
             arguments = new List<Identifer>();
         }
 
-        public void Parse()
+        public MethodBuilder Parse(MethodBuilder current)
         {
             switch (token)
             {
                 case Token.NULL:
-                    //nothing
+                    //do nothing
                     break;
                 case Token.USE:
                     Identifer id = arguments[0];
                     if (id is TokensAPI.identifers.Array)
                     {
-                        ResourceWriter writer = (ResourceWriter)TokensBuilder.ab.DefineResource("ArrayLibs", "Library", "ArrayLibs.res");
                         foreach (Identifer ide in ((TokensAPI.identifers.Array) id).elements)
                         {
-                            writer.AddResource(ide.GetValue(), Assembly.LoadFrom(Path.GetFullPath(ide.GetValue())));
+                            //while nothing
                         }
                     }
                     else
                     {
-                        ResourceWriter writer = (ResourceWriter)TokensBuilder.ab.DefineResource(id.GetValue(), "Library", id.GetValue() + ".res");
-                        writer.AddResource(id.GetValue(), Assembly.LoadFrom(Path.GetFullPath(id.GetValue())));
+                        //while nothing
                     }
                     break;
                 case Token.WRITEVAR:
@@ -230,6 +248,7 @@ namespace TokensBuilder
                 case Token.NEWPOINTER:
                     break;
             }
+            return TokensBuilder.main_method;
         }
     }
 }

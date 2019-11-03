@@ -165,6 +165,7 @@
         CASE,
         DEFAULT,
         NEWPOINTER,
-        STARTBLOCK
+        STARTBLOCK,
+        DIRECTIVA
     }
 }
