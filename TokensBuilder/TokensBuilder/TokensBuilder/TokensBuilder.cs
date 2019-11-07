@@ -19,7 +19,6 @@ namespace TokensBuilder
         public static AppDomain cd;
         public static AssemblyBuilder ab;
         public static MethodBuilder main_method;
-        public static CompilerParameters cp = new CompilerParameters();
 
         public static string info
         {
@@ -42,6 +41,18 @@ namespace TokensBuilder
                     case "-o":
                         using (StreamReader file = File.OpenText(Path.GetFullPath(args[1])))
                         {
+                            try
+                            {
+                                if (args[3] == "-config")
+                                {
+                                    StreamReader config_reader = File.OpenText(Path.GetFullPath(args[4]));
+                                    ParseConfig(config_reader.ReadToEnd());
+                                }
+                            }
+                            catch
+                            {
+                                //nothing
+                            }
                             Build(args[2], file.ReadToEnd());
                         }
                         break;
@@ -94,6 +105,11 @@ namespace TokensBuilder
                 main_method = expressions[i].Parse(main_method);
             }
         }
+
+        public static void ParseConfig(string config)
+        {
+            //while nothing
+        }
     }
 
     public class Expression
@@ -131,6 +147,22 @@ namespace TokensBuilder
                 case Token.WRITEVAR:
                     break;
                 case Token.NEWCLASS:
+                    TypeBuilder newtype = TokensBuilder.ab.GetDynamicModule(arguments[0].GetValue())
+                        .DefineType(arguments[1].GetValue(),
+                        (TypeAttributes)Enum.Parse(typeof(TypeAttributes), arguments[2].GetValue()));
+                    int pos = 3;
+                    while (pos < arguments.Count)
+                    {
+                        string keyword = arguments[pos].GetValue();
+                        if (keyword == "parent")
+                        {
+                            newtype.SetParent(Type.GetType(arguments[++pos].GetValue()));
+                        }
+                        else if (keyword == "interface")
+                        {
+                            newtype.AddInterfaceImplementation(Type.GetType(arguments[++pos].GetValue()));
+                        }
+                    }
                     break;
                 case Token.NEWVAR:
                     break;
