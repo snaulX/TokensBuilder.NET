@@ -138,17 +138,9 @@ namespace TokensBuilder
                     //do nothing
                     break;
                 case Token.USE:
-                    Identifer id = arguments[0];
-                    if (id is TokensAPI.identifers.Array)
+                    foreach (Identifer ide in arguments)
                     {
-                        foreach (Identifer ide in ((TokensAPI.identifers.Array) id).elements)
-                        {
-                            Assembly.LoadFile(ide.GetValue() + ".dll");
-                        }
-                    }
-                    else
-                    {
-                        Assembly.LoadFile(id.GetValue() + ".dll");
+                        Assembly.LoadFile(ide.GetValue() + ".dll");
                     }
                     break;
                 case Token.WRITEVAR:
@@ -157,19 +149,6 @@ namespace TokensBuilder
                     TypeBuilder newtype = TokensBuilder.ab.GetDynamicModule(arguments[0].GetValue())
                         .DefineType(arguments[1].GetValue(),
                         (TypeAttributes)Enum.Parse(typeof(TypeAttributes), arguments[2].GetValue()));
-                    int pos = 3;
-                    while (pos < arguments.Count)
-                    {
-                        string keyword = arguments[pos].GetValue();
-                        if (keyword == "parent")
-                        {
-                            newtype.SetParent(Type.GetType(arguments[++pos].GetValue()));
-                        }
-                        else if (keyword == "interface")
-                        {
-                            newtype.AddInterfaceImplementation(Type.GetType(arguments[++pos].GetValue()));
-                        }
-                    }
                     newtype.CreateType();
                     context.tb = newtype;
                     break;
@@ -244,16 +223,14 @@ namespace TokensBuilder
                 case Token.CATCH:
                     break;
                 case Token.IMPLEMENTS:
+                    context.tb.AddInterfaceImplementation(Type.GetType(arguments[0].GetValue()));
                     break;
                 case Token.THROW:
                     break;
                 case Token.CALLCONSTRUCTOR:
                     break;
-                case Token.ABSTRACT:
-                    break;
-                case Token.STATIC:
-                    break;
                 case Token.OVERRIDE:
+                    context.tb.SetParent(Type.GetType(arguments[0].GetValue()));
                     break;
                 case Token.GET:
                     break;
@@ -262,18 +239,6 @@ namespace TokensBuilder
                 case Token.TYPEOF:
                     break;
                 case Token.CONST:
-                    break;
-                case Token.INTERNAL:
-                    break;
-                case Token.SEALED:
-                    break;
-                case Token.EXTERNAL:
-                    break;
-                case Token.PUBLIC:
-                    break;
-                case Token.PRIVATE:
-                    break;
-                case Token.PROTECTED:
                     break;
                 case Token.OPERATOR:
                     break;
@@ -288,6 +253,20 @@ namespace TokensBuilder
                 case Token.DEFAULT:
                     break;
                 case Token.NEWPOINTER:
+                    break;
+                case Token.STARTBLOCK:
+                    break;
+                case Token.DIRECTIVA:
+                    if (arguments[0].GetValue() == "version")
+                    {
+                        Assembly.GetEntryAssembly().GetName().Version = new Version(arguments[1].GetValue());
+                    }
+                    break;
+                case Token.ENDMODULE:
+                    break;
+                case Token.ENDCLASS:
+                    break;
+                case Token.ENDMETHOD:
                     break;
             }
         }

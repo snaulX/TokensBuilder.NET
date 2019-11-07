@@ -138,26 +138,33 @@
         /// Write OpCode to block
         /// </summary>
         OPCODEADD,
+        /// <summary>
+        /// Create new event type
+        /// </summary>
         NEWEVENT,
+        /// <summary>
+        /// Get event 
+        /// </summary>
         GETEVENT,
+        /// <summary>
+        /// Create block 'try'
+        /// </summary>
         TRY,
+        /// <summary>
+        /// Create block 'catch'
+        /// </summary>
         CATCH,
+        /// <summary>
+        /// Create implementation of interface in the class block
+        /// </summary>
         IMPLEMENTS,
         THROW,
         CALLCONSTRUCTOR,
-        ABSTRACT,
-        STATIC,
         OVERRIDE,
         GET,
         SET,
         TYPEOF,
         CONST,
-        INTERNAL,
-        SEALED,
-        EXTERNAL,
-        PUBLIC,
-        PRIVATE,
-        PROTECTED,
         OPERATOR,
         ASYNC,
         AWAIT,
@@ -166,6 +173,9 @@
         DEFAULT,
         NEWPOINTER,
         STARTBLOCK,
-        DIRECTIVA
+        DIRECTIVA,
+        ENDMODULE,
+        ENDCLASS,
+        ENDMETHOD
     }
 }
