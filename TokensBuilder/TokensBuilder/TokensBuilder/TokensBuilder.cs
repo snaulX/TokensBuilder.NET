@@ -5,6 +5,7 @@ using System.IO;
 using TokensAPI;
 using System.Collections.Generic;
 using System.CodeDom.Compiler;
+using TokensAPI.identifers;
 
 namespace TokensBuilder
 {
@@ -44,8 +45,7 @@ namespace TokensBuilder
                             {
                                 if (args[3] == "-config")
                                 {
-                                    StreamReader config_reader = File.OpenText(Path.GetFullPath(args[4]));
-                                    ParseConfig(config_reader.ReadToEnd());
+                                    //ab.DefineResource("config", "Config of compilation", Path.GetFullPath(args[4]));
                                 }
                             }
                             catch
@@ -105,11 +105,6 @@ namespace TokensBuilder
                 expressions[i].Parse(ref context);
             }
         }
-
-        public static void ParseConfig(string config)
-        {
-            //while nothing
-        }
     }
 
     public struct ContextInfo
@@ -146,9 +141,12 @@ namespace TokensBuilder
                 case Token.WRITEVAR:
                     break;
                 case Token.NEWCLASS:
-                    TypeBuilder newtype = TokensBuilder.ab.GetDynamicModule(arguments[0].GetValue())
-                        .DefineType(arguments[1].GetValue(),
-                        (TypeAttributes)Enum.Parse(typeof(TypeAttributes), arguments[2].GetValue()));
+                    TypeAttributes typeAttribute = TypeAttributes.Class;
+                    for (int i = 1; i < arguments.Count - 1; i++)
+                    {
+                        typeAttribute = typeAttribute | (TypeAttributes)Enum.Parse(typeof(TypeAttributes), arguments[i].GetValue());
+                    }
+                    TypeBuilder newtype = context.modb.DefineType(arguments[0].GetValue(), typeAttribute);
                     newtype.CreateType();
                     context.tb = newtype;
                     break;
@@ -199,6 +197,18 @@ namespace TokensBuilder
                 case Token.NEWINTERFACE:
                     break;
                 case Token.NEWENUM:
+                    typeAttribute = TypeAttributes.Public;
+                    int pos = arguments.IndexOf(new SimpleIdentifer("LITERALS"));
+                    for (int i = 1; i < pos; i++)
+                    {
+                        typeAttribute = typeAttribute | (TypeAttributes)Enum.Parse(typeof(TypeAttributes), arguments[i].GetValue());
+                    }
+                    EnumBuilder newenum = context.modb.DefineEnum(arguments[0].GetValue(), typeAttribute, typeof(int));
+                    for (int i = ++pos; i < arguments.Count; i++)
+                    {
+                        newenum.DefineLiteral(arguments[i].GetValue(), int.Parse(arguments[++i].GetValue()));
+                    }
+                    newenum.CreateType();
                     break;
                 case Token.NEWMODULE:
                     ModuleBuilder modb = TokensBuilder.ab.DefineDynamicModule(arguments[0].GetValue());
