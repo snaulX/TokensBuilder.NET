@@ -18,7 +18,6 @@ namespace TokensBuilder
     {
         public static AppDomain cd;
         public static AssemblyBuilder ab;
-        public static MethodBuilder main_method;
 
         public static string info
         {
@@ -99,10 +98,11 @@ namespace TokensBuilder
             ModuleBuilder main_module = ab.DefineDynamicModule("main");
             TypeBuilder main_type = main_module.DefineType("Main");
             main_type.CreateType();
-            main_method = main_type.DefineMethod("Main", MethodAttributes.Static, CallingConventions.Any);
+            MethodBuilder main_method = main_type.DefineMethod("Main", MethodAttributes.Static, CallingConventions.Any);
+            ContextInfo context = new ContextInfo { tb = main_type, mb = main_method, modb = main_module };
             for (int i = 0; i < expressions.Count; i++)
             {
-                main_method = expressions[i].Parse(main_method);
+                expressions[i].Parse(ref context);
             }
         }
 
@@ -110,6 +110,13 @@ namespace TokensBuilder
         {
             //while nothing
         }
+    }
+
+    public struct ContextInfo
+    {
+        public ModuleBuilder modb;
+        public TypeBuilder tb;
+        public MethodBuilder mb;
     }
 
     public class Expression
@@ -123,7 +130,7 @@ namespace TokensBuilder
             arguments = new List<Identifer>();
         }
 
-        public MethodBuilder Parse(MethodBuilder current)
+        public void Parse(ref ContextInfo context)
         {
             switch (token)
             {
@@ -136,12 +143,12 @@ namespace TokensBuilder
                     {
                         foreach (Identifer ide in ((TokensAPI.identifers.Array) id).elements)
                         {
-                            //while nothing
+                            Assembly.LoadFile(ide.GetValue() + ".dll");
                         }
                     }
                     else
                     {
-                        //while nothing
+                        Assembly.LoadFile(id.GetValue() + ".dll");
                     }
                     break;
                 case Token.WRITEVAR:
@@ -163,6 +170,8 @@ namespace TokensBuilder
                             newtype.AddInterfaceImplementation(Type.GetType(arguments[++pos].GetValue()));
                         }
                     }
+                    newtype.CreateType();
+                    context.tb = newtype;
                     break;
                 case Token.NEWVAR:
                     break;
@@ -213,7 +222,8 @@ namespace TokensBuilder
                 case Token.NEWENUM:
                     break;
                 case Token.NEWMODULE:
-                    TokensBuilder.ab.DefineDynamicModule(arguments[0].GetValue());
+                    ModuleBuilder modb = TokensBuilder.ab.DefineDynamicModule(arguments[0].GetValue());
+                    context.modb = modb;
                     break;
                 case Token.NEWCONSTRUCTOR:
                     break;
@@ -280,7 +290,6 @@ namespace TokensBuilder
                 case Token.NEWPOINTER:
                     break;
             }
-            return TokensBuilder.main_method;
         }
     }
 }
