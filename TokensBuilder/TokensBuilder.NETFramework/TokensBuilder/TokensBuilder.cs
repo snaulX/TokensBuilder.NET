@@ -4,7 +4,6 @@ using System.Reflection;
 using System.IO;
 using TokensAPI;
 using System.Collections.Generic;
-using System.CodeDom.Compiler;
 using TokensAPI.identifers;
 
 namespace TokensBuilder
@@ -17,9 +16,6 @@ namespace TokensBuilder
 
     public static class TokensBuilder
     {
-        public static AppDomain cd;
-        public static AssemblyBuilder ab;
-
         public static string info
         {
             get => "TokensBuilder by snaulX\n" +
@@ -41,17 +37,6 @@ namespace TokensBuilder
                     case "-o":
                         using (StreamReader file = File.OpenText(Path.GetFullPath(args[1])))
                         {
-                            try
-                            {
-                                if (args[3] == "-config")
-                                {
-                                    //ab.DefineResource("config", "Config of compilation", Path.GetFullPath(args[4]));
-                                }
-                            }
-                            catch
-                            {
-                                //nothing
-                            }
                             Build(args[2], file.ReadToEnd());
                         }
                         break;
@@ -88,18 +73,15 @@ namespace TokensBuilder
 
         public static void Build(string assembly_name, List<Expression> expressions)
         {
-            AppDomainSetup ads = new AppDomainSetup();
-            ads.ApplicationName = assembly_name + "TokensApplication";
-            cd = AppDomain.CreateDomain("CompilerDomain");
             AssemblyName aName = new AssemblyName(assembly_name);
-            ab = cd.DefineDynamicAssembly(
+            AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     aName,
                     AssemblyBuilderAccess.RunAndSave);
             ModuleBuilder main_module = ab.DefineDynamicModule("main");
             TypeBuilder main_type = main_module.DefineType("Main");
             main_type.CreateType();
             MethodBuilder main_method = main_type.DefineMethod("Main", MethodAttributes.Static, CallingConventions.Any);
-            ContextInfo context = new ContextInfo { tb = main_type, mb = main_method, modb = main_module };
+            ContextInfo context = new ContextInfo { tb = main_type, mb = main_method, modb = main_module, ab = ab };
             for (int i = 0; i < expressions.Count; i++)
             {
                 expressions[i].Parse(ref context);
@@ -112,6 +94,7 @@ namespace TokensBuilder
         public ModuleBuilder modb;
         public TypeBuilder tb;
         public MethodBuilder mb;
+        public AssemblyBuilder ab;
     }
 
     public class Expression
@@ -211,7 +194,7 @@ namespace TokensBuilder
                     newenum.CreateType();
                     break;
                 case Token.NEWMODULE:
-                    ModuleBuilder modb = TokensBuilder.ab.DefineDynamicModule(arguments[0].GetValue());
+                    ModuleBuilder modb = context.ab.DefineDynamicModule(arguments[0].GetValue());
                     context.modb = modb;
                     break;
                 case Token.NEWCONSTRUCTOR:
