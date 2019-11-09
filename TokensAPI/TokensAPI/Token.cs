@@ -174,7 +174,6 @@
         NEWPOINTER,
         STARTBLOCK,
         DIRECTIVA,
-        ENDMODULE,
         ENDCLASS,
         ENDMETHOD
     }
