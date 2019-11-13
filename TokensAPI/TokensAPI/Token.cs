@@ -7,7 +7,7 @@
         /// </summary>
         NULL,
         /// <summary>
-        /// Copy all modules and its contents from assembly and add to this assembly
+        /// Create ability to seacrh in linked namespaces
         /// </summary>
         USE,
         /// <summary>
@@ -173,8 +173,23 @@
         DEFAULT,
         NEWPOINTER,
         STARTBLOCK,
+        /// <summary>
+        /// Pre-compiler directiva
+        /// </summary>
         DIRECTIVA,
         ENDCLASS,
-        ENDMETHOD
+        ENDMETHOD,
+        /// <summary>
+        /// Get all classes, methods and etc from other tokens
+        /// </summary>
+        LIB,
+        /// <summary>
+        /// Write code on low-level programming language
+        /// </summary>
+        VIRTUAL,
+        /// <summary>
+        /// Set creating namespace
+        /// </summary>
+        NAMESPACE
     }
 }

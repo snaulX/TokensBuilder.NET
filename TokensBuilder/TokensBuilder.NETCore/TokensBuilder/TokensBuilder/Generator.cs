@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using TokensAPI;
+using System.Reflection;
 
 namespace TokensBuilder
 {
@@ -11,6 +12,23 @@ namespace TokensBuilder
     {
         OUTPUTEXE,
         OUTPUTDLL
+    }
+
+    public struct SwitchContext
+    {
+        string end_address;
+        List<Expression> code;
+
+        public SwitchContext(string end_address, List<Expression> code)
+        {
+            this.end_address = end_address ?? throw new ArgumentNullException(nameof(end_address));
+            this.code = code ?? throw new ArgumentNullException(nameof(code));
+        }
+
+        public bool IsNotEmpty()
+        {
+            return false;
+        }
     }
 
     public class Generator
@@ -30,7 +48,6 @@ namespace TokensBuilder
 
         public void Build(string assembly_name, string code)
         {
-            expressions = new List<Expression>();
             string[] lines = code.Split('\n', '\r');
             for (int i = 0; i < lines.Length; i++)
             {
@@ -47,9 +64,12 @@ namespace TokensBuilder
 
         public void Build(string assembly_name)
         {
-            StringBuilder code_builder = new StringBuilder();
+            //List<Assembly> assemblies = new List<Assembly>();
+            List<string> namespaces_check = new List<string>();
+            StringBuilder code_builder = new StringBuilder(), localstack_builder = new StringBuilder();
             int start_of_block = 0;
-            Dictionary<string, string> labels = new Dictionary<string, string>();
+            SwitchContext switchContext = new SwitchContext();
+            Dictionary<string, string> labels = new Dictionary<string, string>(), local_vars = new Dictionary<string, string>();
             for (int i = 0; i < expressions.Count; i++)
             {
                 Expression expression = expressions[i];
@@ -59,12 +79,21 @@ namespace TokensBuilder
                         code_builder.AppendLine("nop");
                         break;
                     case Token.USE:
+                        namespaces_check.Add(expression.args[0].GetValue());
                         break;
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
                         break;
                     case Token.NEWVAR:
+                        if (expression.args[1].GetValue() != "public")
+                        {
+                            localstack_builder.Append("");
+                        }
+                        else
+                        {
+                            //else
+                        }
                         break;
                     case Token.NEWFUNC:
                         code_builder.Append(".method ");
@@ -78,6 +107,7 @@ namespace TokensBuilder
                     case Token.GETFUNC:
                         break;
                     case Token.RUNFUNC:
+                        code_builder.Append("call  ");
                         break;
                     case Token.WHILE:
                         break;
@@ -173,11 +203,28 @@ namespace TokensBuilder
                         string directiva_name = expression.args[0].GetValue();
                         if (directiva_name == "entrypoint") code_builder.AppendLine(".entrypoint");
                         else if (directiva_name == "version") version = new Version(expression.args[1].GetValue());
+                        else if (directiva_name == "include")
+                        {
+                            string dllName = expression.args[1].GetValue();
+                            Assembly.LoadFile(dllName);
+                            output_il_code.Insert(0, ".assembly extern " + dllName + " {}\n");
+                        }
                         break;
-                    case Token.END:
                     case Token.ENDCLASS:
+                    case Token.END:
                     case Token.ENDMETHOD:
-                        code_builder.AppendLine("}");
+                        if (switchContext.IsNotEmpty())
+                        {
+                            //pass
+                        }
+                        else
+                        {
+                            code_builder.AppendLine("}");
+                        }
+                        break;
+                    case Token.LIB:
+                        break;
+                    case Token.VIRTUAL:
                         break;
                 }
             }
