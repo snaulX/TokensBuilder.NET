@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Reflection.Emit;
-using System.Reflection;
 using System.IO;
-using TokensAPI;
-using System.Collections.Generic;
-using TokensAPI.identifers;
 
 namespace TokensBuilder
 {
@@ -13,7 +8,7 @@ namespace TokensBuilder
         public static string info
         {
             get => "TokensBuilder by snaulX\n" +
-                $"Version - {Assembly.GetExecutingAssembly().GetName().Version}\n" +
+                $"Version - {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}\n" +
                 "For get info write \"TokensBuilder -info\" in your command line";
         }
 
@@ -33,6 +28,7 @@ namespace TokensBuilder
                         using (StreamReader file = File.OpenText(Path.GetFullPath(args[1])))
                         {
                             generator.GenerateIL(args[2], file.ReadToEnd());
+                            generator.CreatePE(args[2]);
                         }
                         break;
                     case "-info":
@@ -42,7 +38,9 @@ namespace TokensBuilder
                         string filename = args[0];
                         using (StreamReader file = File.OpenText(Path.GetFullPath(filename)))
                         {
-                            generator.GenerateIL(filename.Remove(filename.LastIndexOf('.')), file.ReadToEnd());
+                            string tokensName = filename.Remove(filename.LastIndexOf('.'));
+                            generator.GenerateIL(tokensName, file.ReadToEnd());
+                            generator.CreatePE(tokensName + ".exe");
                         }
                         break;
                 }

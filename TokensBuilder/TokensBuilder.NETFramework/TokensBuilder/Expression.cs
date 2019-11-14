@@ -16,5 +16,11 @@ namespace TokensBuilder
             token = Token.NULL;
             args = new List<Identifer>();
         }
+
+        public Expression(Token token, List<Identifer> args)
+        {
+            this.token = token;
+            this.args = args ?? throw new ArgumentNullException(nameof(args));
+        }
     }
 }
