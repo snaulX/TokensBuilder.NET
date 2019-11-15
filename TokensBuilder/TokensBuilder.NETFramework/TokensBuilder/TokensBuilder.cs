@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace TokensBuilder
@@ -21,7 +22,7 @@ namespace TokensBuilder
             }
             else
             {
-                Generator generator = new Generator();
+                Generator generator = new Generator { context = new ContextInfo(), expressions = new List<Expression>() };
                 switch (args[0])
                 {
                     case "-o":

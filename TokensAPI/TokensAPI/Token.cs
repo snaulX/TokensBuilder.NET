@@ -190,6 +190,15 @@
         /// <summary>
         /// Set creating namespace
         /// </summary>
-        NAMESPACE
+        NAMESPACE,
+        /// <summary>
+        /// It`s just single commentary
+        /// </summary>
+        COMMENT,
+        /// <summary>
+        /// It`s just multiline commentary
+        /// </summary>
+        MULTICOMMENT,
+        ENDNAMESPACE
     }
 }

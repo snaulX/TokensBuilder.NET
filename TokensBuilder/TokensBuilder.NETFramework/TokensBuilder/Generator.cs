@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 using TokensAPI;
 
 namespace TokensBuilder
@@ -34,19 +35,24 @@ namespace TokensBuilder
                 }
             }
 
+            //variables for building
+            List<string> check_namespaces = new List<string>();
+            string namespace_name = "";
+
             //parse expressions
             for (int i = 0; i < expressions.Count; i++)
             {
                 Expression e = expressions[i];
                 switch (e.token)
                 {
-                    case Token.NULL:
-                        break;
                     case Token.USE:
+                        check_namespaces.Add(e.args[0].GetValue());
                         break;
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
+                        context.type = new TypeDefinition(namespace_name, e.args[0].GetValue(), TypeAttributes.NotPublic, 
+                            context.module.ImportReference(typeof(void)));
                         break;
                     case Token.NEWVAR:
                         break;
@@ -119,6 +125,7 @@ namespace TokensBuilder
                     case Token.IMPLEMENTS:
                         break;
                     case Token.THROW:
+                        context.ILGenerator.Emit(OpCodes.Throw, e.args[0].GetValue());
                         break;
                     case Token.CALLCONSTRUCTOR:
                         break;
@@ -150,11 +157,15 @@ namespace TokensBuilder
                         break;
                     case Token.DIRECTIVA:
                         break;
-                    case Token.ENDMODULE:
-                        break;
                     case Token.ENDCLASS:
                         break;
                     case Token.ENDMETHOD:
+                        break;
+                    case Token.NAMESPACE:
+                        namespace_name = e.args[0].GetValue();
+                        break;
+                    case Token.ENDNAMESPACE:
+                        namespace_name = "";
                         break;
                 }
             }
@@ -168,11 +179,19 @@ namespace TokensBuilder
         public Version version;
         public AssemblyNameDefinition assemblyName;
         public AssemblyDefinition assembly;
-        public MethodDefinition method;
+        public MethodDefinition method, entrypoint;
         public TypeDefinition type;
-        public ModuleDefinition module;
+        public ModuleDefinition module
+        {
+            get => assembly.MainModule;
+        }
+        public FieldDefinition field;
         public ModuleKind kind;
         public string moduleName;
+        public ILProcessor ILGenerator
+        {
+            get => method.Body.GetILProcessor();
+        }
 
         public ContextInfo(string assembly_name, Version version): this()
         {

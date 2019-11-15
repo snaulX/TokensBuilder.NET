@@ -1,14 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netstandart1.0</TargetFramework>
     <Company>World of Legends</Company>
     <Authors>snaulX</Authors>
     <Version>0.9.0</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>C:\Users\User\Desktop\World of Legends\TokensBuilder\tokensbuilder-dotnet\TokensBuilder\TokensBuilder.NETCore\TokensBuilder\TokensBuilder\bin\Debug\</OutputPath>
+    <OutputPath>C:\Users\User\Desktop\World of Legends\TokensBuilder\tokensbuilder-dotnet\TokensBuilder\TokensBuilder.NETFramework\TokensBuilder\bin\</OutputPath>
   </PropertyGroup>
 
 </Project>
