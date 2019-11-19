@@ -1,10 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandart1.0</TargetFramework>
-    <Company>World of Legends</Company>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>snaulX</Authors>
-    <Version>0.9.0</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

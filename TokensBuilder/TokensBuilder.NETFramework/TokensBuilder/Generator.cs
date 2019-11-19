@@ -37,6 +37,8 @@ namespace TokensBuilder
 
             //variables for building
             List<string> check_namespaces = new List<string>();
+            Dictionary<string, string> labels = new Dictionary<string, string>();
+            short ifLabels = 0, whileLabels = 0;
             string namespace_name = "";
 
             //parse expressions
@@ -51,8 +53,7 @@ namespace TokensBuilder
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
-                        context.type = new TypeDefinition(namespace_name, e.args[0].GetValue(), TypeAttributes.NotPublic, 
-                            context.module.ImportReference(typeof(void)));
+                        context.type = new TypeDefinition(namespace_name, e.args[0].GetValue(), TypeAttributes.NotPublic, context.@void);
                         break;
                     case Token.NEWVAR:
                         break;
@@ -154,12 +155,20 @@ namespace TokensBuilder
                     case Token.NEWPOINTER:
                         break;
                     case Token.STARTBLOCK:
+                        switch (expressions[i - 1].token)
+                        {
+                            case Token.IF:
+                                labels.Add("IF_" + ++ifLabels, "IL_" + ifLabels);
+                                context.ILGenerator.Emit(OpCodes.Initblk);
+                                break;
+                        }
                         break;
                     case Token.DIRECTIVA:
                         break;
                     case Token.ENDCLASS:
                         break;
                     case Token.ENDMETHOD:
+                        context.EndMethod();
                         break;
                     case Token.NAMESPACE:
                         namespace_name = e.args[0].GetValue();
@@ -176,6 +185,10 @@ namespace TokensBuilder
 
     public class ContextInfo
     {
+        public TypeReference @void
+        {
+            get => module.ImportReference(typeof(void));
+        }
         public Version version;
         public AssemblyNameDefinition assemblyName;
         public AssemblyDefinition assembly;
@@ -197,6 +210,8 @@ namespace TokensBuilder
         {
             this.version = version;
             assemblyName = new AssemblyNameDefinition(assembly_name, version);
+            entrypoint = new MethodDefinition("Main", MethodAttributes.Static | MethodAttributes.HideBySig, @void);
+            method = entrypoint;
         }
 
         public ContextInfo()
@@ -208,6 +223,18 @@ namespace TokensBuilder
         public void GenerateAssembly()
         {
             assembly = AssemblyDefinition.CreateAssembly(assemblyName, moduleName, kind);
+        }
+
+        public void EndMethod()
+        {
+            if (method == entrypoint)
+            {
+                method = null;
+            }
+            else
+            {
+                method = entrypoint;
+            }
         }
     }
 }

@@ -12,7 +12,7 @@ namespace TokensBuilder
                 $"Version - {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}\n" +
                 "For get info write \"TokensBuilder -info\" in your command line";
         }
-
+        
         static void Main(string[] args)
         {
             if (args.Length == 0)
