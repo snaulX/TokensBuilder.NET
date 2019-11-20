@@ -1,53 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.IO;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
 using TokensAPI;
-using System.Reflection;
 
 namespace TokensBuilder
 {
-    [Flags]
-    public enum BuildOptions
-    {
-        OUTPUTEXE,
-        OUTPUTDLL
-    }
-
-    public struct SwitchContext
-    {
-        string end_address;
-        List<Expression> code;
-
-        public SwitchContext(string end_address, List<Expression> code)
-        {
-            this.end_address = end_address ?? throw new ArgumentNullException(nameof(end_address));
-            this.code = code ?? throw new ArgumentNullException(nameof(code));
-        }
-
-        public bool IsNotEmpty()
-        {
-            return false;
-        }
-    }
-
     public class Generator
     {
+        public Instruction GetValue(string value)
+        {
+            return context.ILGenerator.Create(OpCodes.Ldnull);
+        }
+
+        public ContextInfo context;
         public List<Expression> expressions;
-        public string output_il_code;
-        public Version version;
-        public BuildOptions buildOptions;
 
         public Generator()
         {
             expressions = new List<Expression>();
-            output_il_code = "";
-            version = new Version();
-            buildOptions = BuildOptions.OUTPUTEXE;
+            context = new ContextInfo();
         }
 
-        public void Build(string assembly_name, string code)
+        public void GenerateIL(string assembly_name, string code)
         {
+            //create context
+            context.assemblyName = new AssemblyNameDefinition(assembly_name, new Version());
+
+            //parse code to expressions
             string[] lines = code.Split('\n', '\r');
             for (int i = 0; i < lines.Length; i++)
             {
@@ -59,46 +39,32 @@ namespace TokensBuilder
                     expr.args.Add(Identifer.GetIdentifer(ids[j]));
                 }
             }
-            Build(assembly_name);
-        }
 
-        public void Build(string assembly_name)
-        {
-            //List<Assembly> assemblies = new List<Assembly>();
-            List<string> namespaces_check = new List<string>();
-            StringBuilder code_builder = new StringBuilder(), localstack_builder = new StringBuilder();
-            int start_of_block = 0;
-            SwitchContext switchContext = new SwitchContext();
-            Dictionary<string, string> labels = new Dictionary<string, string>(), local_vars = new Dictionary<string, string>();
+            //variables for building
+            List<string> check_namespaces = new List<string>();
+            Dictionary<string, string> labels = new Dictionary<string, string>();
+            short ifLabels = 0, whileLabels = 0;
+            string namespace_name = "";
+
+            //parse expressions
             for (int i = 0; i < expressions.Count; i++)
             {
-                Expression expression = expressions[i];
-                switch (expression.token)
+                Expression e = expressions[i];
+                switch (e.token)
                 {
-                    case Token.NULL:
-                        code_builder.AppendLine("nop");
-                        break;
                     case Token.USE:
-                        namespaces_check.Add(expression.args[0].GetValue());
+                        check_namespaces.Add(e.args[0].GetValue());
                         break;
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
+                        context.type = new TypeDefinition(namespace_name, e.args[0].GetValue(), TypeAttributes.NotPublic, context.@void);
                         break;
                     case Token.NEWVAR:
-                        if (expression.args[1].GetValue() != "public")
-                        {
-                            localstack_builder.Append("");
-                        }
-                        else
-                        {
-                            //else
-                        }
                         break;
                     case Token.NEWFUNC:
-                        code_builder.Append(".method ");
-                        code_builder.AppendLine(" cil managed");
-                        start_of_block = i + 1;
+                        break;
+                    case Token.END:
                         break;
                     case Token.GETCLASS:
                         break;
@@ -107,7 +73,6 @@ namespace TokensBuilder
                     case Token.GETFUNC:
                         break;
                     case Token.RUNFUNC:
-                        code_builder.Append("call  ");
                         break;
                     case Token.WHILE:
                         break;
@@ -116,11 +81,12 @@ namespace TokensBuilder
                     case Token.FOREACH:
                         break;
                     case Token.BREAK:
-                        code_builder.AppendLine("break");
                         break;
                     case Token.CONTINUE:
                         break;
                     case Token.RETURN:
+                        context.ILGenerator.Append(GetValue(e.args[0].GetValue()));
+                        context.ILGenerator.Emit(OpCodes.Ret);
                         break;
                     case Token.IF:
                         break;
@@ -131,8 +97,6 @@ namespace TokensBuilder
                     case Token.GOTO:
                         break;
                     case Token.LABEL:
-                        code_builder.Append("IL_" + Convert.ToString(i, 16) + ":");
-                        labels.TryAdd(expression.args[0].GetValue(), "IL_" + Convert.ToString(i, 16));
                         break;
                     case Token.YIELD:
                         break;
@@ -163,13 +127,13 @@ namespace TokensBuilder
                     case Token.GETEVENT:
                         break;
                     case Token.TRY:
-                        code_builder.AppendLine(".try\n{");
                         break;
                     case Token.CATCH:
                         break;
                     case Token.IMPLEMENTS:
                         break;
                     case Token.THROW:
+                        context.ILGenerator.Emit(OpCodes.Throw, e.args[0].GetValue());
                         break;
                     case Token.CALLCONSTRUCTOR:
                         break;
@@ -200,52 +164,77 @@ namespace TokensBuilder
                     case Token.STARTBLOCK:
                         break;
                     case Token.DIRECTIVA:
-                        string directiva_name = expression.args[0].GetValue();
-                        if (directiva_name == "entrypoint") code_builder.AppendLine(".entrypoint");
-                        else if (directiva_name == "version") version = new Version(expression.args[1].GetValue());
-                        else if (directiva_name == "include")
-                        {
-                            string dllName = expression.args[1].GetValue();
-                            Assembly.LoadFile(dllName);
-                            output_il_code.Insert(0, ".assembly extern " + dllName + " {}\n");
-                        }
                         break;
                     case Token.ENDCLASS:
-                    case Token.END:
+                        break;
                     case Token.ENDMETHOD:
-                        if (switchContext.IsNotEmpty())
-                        {
-                            //pass
-                        }
-                        else
-                        {
-                            code_builder.AppendLine("}");
-                        }
+                        context.EndMethod();
                         break;
-                    case Token.LIB:
+                    case Token.NAMESPACE:
+                        namespace_name = e.args[0].GetValue();
                         break;
-                    case Token.VIRTUAL:
+                    case Token.ENDNAMESPACE:
+                        namespace_name = "";
                         break;
                 }
             }
-            output_il_code += $".assembly {assembly_name}{{\n" +
-                $"  .ver {version.ToString().Replace('.', ':')} //version {version}\n" +
-                "}}\n.assembly extern mscorlib {}\n";
-            output_il_code += code_builder.ToString();
         }
 
-        public void CreateILFile(string directory, string filename)
+        public void CreatePE(string full_name) => context.assembly.Write(full_name);
+    }
+
+    public class ContextInfo
+    {
+        public TypeReference @void
         {
-            using (StreamWriter writer = new StreamWriter(directory + filename + ".il", false, Encoding.Default))
+            get => module.ImportReference(typeof(void));
+        }
+        public Version version;
+        public AssemblyNameDefinition assemblyName;
+        public AssemblyDefinition assembly;
+        public MethodDefinition method, entrypoint;
+        public TypeDefinition type;
+        public ModuleDefinition module
+        {
+            get => assembly.MainModule;
+        }
+        public FieldDefinition field;
+        public ModuleKind kind;
+        public string moduleName;
+        public ILProcessor ILGenerator
+        {
+            get => method.Body.GetILProcessor();
+        }
+
+        public ContextInfo(string assembly_name, Version version): this()
+        {
+            this.version = version;
+            assemblyName = new AssemblyNameDefinition(assembly_name, version);
+            entrypoint = new MethodDefinition("Main", MethodAttributes.Static | MethodAttributes.HideBySig, @void);
+            method = entrypoint;
+        }
+
+        public ContextInfo()
+        {
+            kind = ModuleKind.Console;
+            version = new Version();
+        }
+
+        public void GenerateAssembly()
+        {
+            assembly = AssemblyDefinition.CreateAssembly(assemblyName, moduleName, kind);
+        }
+
+        public void EndMethod()
+        {
+            if (method == entrypoint)
             {
-                writer.Write(output_il_code);
-                writer.Close();
+                method = null;
             }
-        }
-
-        public void GeneratePE(string fileName)
-        {
-            System.Diagnostics.Process.Start("ilasm", fileName);
+            else
+            {
+                method = entrypoint;
+            }
         }
     }
 }

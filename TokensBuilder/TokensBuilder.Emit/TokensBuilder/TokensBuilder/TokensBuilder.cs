@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 
 namespace TokensBuilder
 {
-    public static class TokensBuilder
+    class TokensBuilder
     {
         public static string info
         {
             get => "TokensBuilder by snaulX\n" +
-                $"Version - {Assembly.GetExecutingAssembly().GetName().Version}\n" +
+                $"Version - {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}\n" +
                 "For get info write \"TokensBuilder -info\" in your command line";
         }
 
@@ -23,15 +21,15 @@ namespace TokensBuilder
             }
             else
             {
-                Generator generator = new Generator();
+                Generator generator = new Generator { context = new ContextInfo(),
+                    expressions = new System.Collections.Generic.List<Expression>() };
                 switch (args[0])
                 {
                     case "-o":
                         using (StreamReader file = File.OpenText(Path.GetFullPath(args[1])))
                         {
-                            generator.Build(args[2], file.ReadToEnd());
-                            generator.CreateILFile(Path.GetFullPath(args[1]).Replace('\\' + args[1], string.Empty), args[2]);
-                            generator.GeneratePE(Path.GetFullPath(args[2] + ".il"));
+                            generator.GenerateIL(args[2], file.ReadToEnd());
+                            //generator.CreatePE(args[2]);
                         }
                         break;
                     case "-info":
@@ -41,10 +39,10 @@ namespace TokensBuilder
                         string filename = args[0];
                         using (StreamReader file = File.OpenText(Path.GetFullPath(filename)))
                         {
-                            generator.Build(filename.Remove(filename.LastIndexOf('.')), file.ReadToEnd());
+                            string tokensName = filename.Remove(filename.LastIndexOf('.'));
+                            generator.GenerateIL(tokensName, file.ReadToEnd());
+                            //generator.CreatePE(tokensName + ".exe");
                         }
-                        generator.CreateILFile(Path.GetPathRoot(filename), Path.GetFileNameWithoutExtension(filename));
-                        generator.GeneratePE(Path.GetFileNameWithoutExtension(filename) + ".il");
                         break;
                 }
             }

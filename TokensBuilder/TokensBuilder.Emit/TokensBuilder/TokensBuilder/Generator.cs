@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
+using System.Reflection.Emit;
+using System.Reflection;
 using TokensAPI;
+using System.Linq;
 
 namespace TokensBuilder
 {
+    public enum OutputType
+    {
+        Console,
+        Library,
+        Winexe
+    }
+
     public class Generator
     {
         public ContextInfo context;
@@ -20,7 +28,9 @@ namespace TokensBuilder
         public void GenerateIL(string assembly_name, string code)
         {
             //create context
-            context.assemblyName = new AssemblyNameDefinition(assembly_name, new Version());
+            context.appName = assembly_name;
+            context.assemblyName.Name = assembly_name;
+            context.CreateAssembly();
 
             //parse code to expressions
             string[] lines = code.Split('\n', '\r');
@@ -36,7 +46,6 @@ namespace TokensBuilder
             }
 
             //variables for building
-            List<string> check_namespaces = new List<string>();
             Dictionary<string, string> labels = new Dictionary<string, string>();
             short ifLabels = 0, whileLabels = 0;
             string namespace_name = "";
@@ -47,19 +56,23 @@ namespace TokensBuilder
                 Expression e = expressions[i];
                 switch (e.token)
                 {
+                    case Token.NULL:
+                        context.ILGenerator.Emit(OpCodes.Nop);
+                        break;
                     case Token.USE:
-                        check_namespaces.Add(e.args[0].GetValue());
+                        context.ILGenerator.UsingNamespace(e.args[0].GetValue());
                         break;
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
-                        context.type = new TypeDefinition(namespace_name, e.args[0].GetValue(), TypeAttributes.NotPublic, context.@void);
+                        context.type = context.module.DefineType(e.args[0].GetValue());
                         break;
                     case Token.NEWVAR:
                         break;
                     case Token.NEWFUNC:
                         break;
                     case Token.END:
+                        context.ILGenerator.Emit(OpCodes.Br);
                         break;
                     case Token.GETCLASS:
                         break;
@@ -76,6 +89,7 @@ namespace TokensBuilder
                     case Token.FOREACH:
                         break;
                     case Token.BREAK:
+                        context.ILGenerator.Emit(OpCodes.Br);
                         break;
                     case Token.CONTINUE:
                         break;
@@ -126,11 +140,12 @@ namespace TokensBuilder
                     case Token.IMPLEMENTS:
                         break;
                     case Token.THROW:
-                        context.ILGenerator.Emit(OpCodes.Throw, e.args[0].GetValue());
+                        context.ILGenerator.ThrowException(Type.GetType(e.args[0].GetValue()));
                         break;
                     case Token.CALLCONSTRUCTOR:
                         break;
                     case Token.OVERRIDE:
+                        context.type.SetParent(Type.GetType(e.args[0].GetValue()));
                         break;
                     case Token.GET:
                         break;
@@ -155,11 +170,12 @@ namespace TokensBuilder
                     case Token.NEWPOINTER:
                         break;
                     case Token.STARTBLOCK:
+                        Label label = context.ILGenerator.DefineLabel();
                         switch (expressions[i - 1].token)
                         {
                             case Token.IF:
                                 labels.Add("IF_" + ++ifLabels, "IL_" + ifLabels);
-                                context.ILGenerator.Emit(OpCodes.Initblk);
+                                context.ILGenerator.MarkLabel(label);
                                 break;
                         }
                         break;
@@ -180,61 +196,41 @@ namespace TokensBuilder
             }
         }
 
-        public void CreatePE(string full_name) => context.assembly.Write(full_name);
+        public void CreatePE(string full_name) => context.assembly.Save(full_name);
     }
 
     public class ContextInfo
     {
-        public TypeReference @void
+        public string appName;
+        public OutputType outputType;
+        public AssemblyBuilder assembly;
+        public AssemblyName assemblyName;
+        public ModuleBuilder module;
+        public TypeBuilder type;
+        public MethodBuilder method, script;
+        public FieldBuilder field;
+        public ILGenerator ILGenerator
         {
-            get => module.ImportReference(typeof(void));
-        }
-        public Version version;
-        public AssemblyNameDefinition assemblyName;
-        public AssemblyDefinition assembly;
-        public MethodDefinition method, entrypoint;
-        public TypeDefinition type;
-        public ModuleDefinition module
-        {
-            get => assembly.MainModule;
-        }
-        public FieldDefinition field;
-        public ModuleKind kind;
-        public string moduleName;
-        public ILProcessor ILGenerator
-        {
-            get => method.Body.GetILProcessor();
-        }
-
-        public ContextInfo(string assembly_name, Version version): this()
-        {
-            this.version = version;
-            assemblyName = new AssemblyNameDefinition(assembly_name, version);
-            entrypoint = new MethodDefinition("Main", MethodAttributes.Static | MethodAttributes.HideBySig, @void);
-            method = entrypoint;
+            get => method.GetILGenerator();
         }
 
         public ContextInfo()
         {
-            kind = ModuleKind.Console;
-            version = new Version();
-        }
-
-        public void GenerateAssembly()
-        {
-            assembly = AssemblyDefinition.CreateAssembly(assemblyName, moduleName, kind);
+            appName = "";
+            outputType = OutputType.Console;
+            assemblyName = new AssemblyName(appName);
+            method = null;
         }
 
         public void EndMethod()
         {
-            if (method == entrypoint)
-            {
-                method = null;
-            }
-            else
-            {
-                method = entrypoint;
-            }
+            //pass
+        }
+
+        public void CreateAssembly()
+        {
+            assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
+            module = assembly.DefineDynamicModule(appName, appName + ".dll");
         }
     }
 }
