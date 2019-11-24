@@ -29,7 +29,7 @@ namespace TokensBuilder
                         using (StreamReader file = File.OpenText(Path.GetFullPath(args[1])))
                         {
                             generator.GenerateIL(args[2], file.ReadToEnd());
-                            //generator.CreatePE(args[2]);
+                            generator.CreatePE(args[2]);
                         }
                         break;
                     case "-info":
@@ -41,7 +41,7 @@ namespace TokensBuilder
                         {
                             string tokensName = filename.Remove(filename.LastIndexOf('.'));
                             generator.GenerateIL(tokensName, file.ReadToEnd());
-                            //generator.CreatePE(tokensName + ".exe");
+                            generator.CreatePE(tokensName + ".exe");
                         }
                         break;
                 }

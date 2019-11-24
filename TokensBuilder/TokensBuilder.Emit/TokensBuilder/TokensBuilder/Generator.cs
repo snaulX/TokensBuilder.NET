@@ -4,6 +4,7 @@ using System.Reflection.Emit;
 using System.Reflection;
 using TokensAPI;
 using System.Linq;
+using System.Text;
 
 namespace TokensBuilder
 {
@@ -36,18 +37,44 @@ namespace TokensBuilder
             string[] lines = code.Split('\n', '\r');
             for (int i = 0; i < lines.Length; i++)
             {
-                string[] ids = lines[i].Split(' ', '\t');
-                Expression expr = new Expression();
-                expr.token = Main.GetToken(ids[0]);
-                for (int j = 1; j < ids.Length; j++)
+                string line = lines[i];
+                int j = 0;
+                Token token = (Token)Enum.Parse(typeof(Token), 
+                (string)  line.TakeWhile((cur) => 
                 {
-                    expr.args.Add(Identifer.GetIdentifer(ids[j]));
+                    j++;
+                    return char.IsWhiteSpace(cur);
+                }
+                ));
+                List<Identifer> args = new List<Identifer>();
+                byte priority = 0;
+                StringBuilder buffer = new StringBuilder();
+                for (j = j; j < line.Length; j++)
+                {
+                    char cur = line[j];
+                    if (cur == '(' && priority >= 0)
+                    {
+                        buffer.Append(cur);
+                        priority++;
+                    }
+                    else if (cur == ')' && priority > 0)
+                    {
+                        buffer.Append(cur);
+                        priority--;
+                    }
+                    else if (char.IsWhiteSpace(cur) && priority == 0)
+                    {
+                        args.Add(Identifer.GetIdentifer(buffer.ToString()));
+                        buffer.Clear();
+                    }
+                    else
+                    {
+                        buffer.Append(cur);
+                    }
                 }
             }
 
             //variables for building
-            Dictionary<string, string> labels = new Dictionary<string, string>();
-            short ifLabels = 0, whileLabels = 0;
             string namespace_name = "";
 
             //parse expressions
@@ -171,15 +198,22 @@ namespace TokensBuilder
                         break;
                     case Token.STARTBLOCK:
                         Label label = context.ILGenerator.DefineLabel();
-                        switch (expressions[i - 1].token)
-                        {
-                            case Token.IF:
-                                labels.Add("IF_" + ++ifLabels, "IL_" + ifLabels);
-                                context.ILGenerator.MarkLabel(label);
-                                break;
-                        }
+                        context.ILGenerator.MarkLabel(label);
                         break;
                     case Token.DIRECTIVA:
+                        string directiva_name = e.args[0].GetValue();
+                        if (directiva_name == "outtype")
+                        {
+                            context.outputType = (OutputType) Enum.Parse(typeof(OutputType), e.args[1].GetValue(), true);
+                        }
+                        else if (directiva_name == "version")
+                        {
+                            context.assembly.GetName().Version = new Version(e.args[1].GetValue());
+                        }
+                        else
+                        {
+                            throw new NotSupportedException($"Directiva by name {directiva_name} not found (TokensError in line {i})");
+                        }
                         break;
                     case Token.ENDCLASS:
                         break;
@@ -209,6 +243,7 @@ namespace TokensBuilder
         public TypeBuilder type;
         public MethodBuilder method, script;
         public FieldBuilder field;
+        public ConstructorBuilder constructor;
         public ILGenerator ILGenerator
         {
             get => method.GetILGenerator();
@@ -218,7 +253,7 @@ namespace TokensBuilder
         {
             appName = "";
             outputType = OutputType.Console;
-            assemblyName = new AssemblyName(appName);
+            assemblyName = new AssemblyName();
             method = null;
         }
 

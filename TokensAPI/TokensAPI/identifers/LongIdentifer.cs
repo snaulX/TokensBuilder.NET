@@ -15,7 +15,7 @@ namespace TokensAPI.identifers
             if (Check(identifer)) this.identifer = identifer;
         }
 
-        public override bool Check(string input) => input.StartsWith("\"") && input.EndsWith("\"");
+        public override bool Check(string input) => input.StartsWith("(") && input.EndsWith(")");
 
         public override void Parse(string input)
         {
