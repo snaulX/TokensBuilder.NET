@@ -3,18 +3,10 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
 using TokensAPI;
-using System.Linq;
 using System.Text;
 
 namespace TokensBuilder
 {
-    public enum OutputType
-    {
-        Console,
-        Library,
-        Winexe
-    }
-
     public class Generator
     {
         public ContextInfo context;
@@ -30,48 +22,55 @@ namespace TokensBuilder
         {
             //create context
             context.appName = assembly_name;
-            context.assemblyName.Name = assembly_name;
+            context.CreateName();
             context.CreateAssembly();
+            context.InitilizateScript();
 
             //parse code to expressions
             string[] lines = code.Split('\n', '\r');
             for (int i = 0; i < lines.Length; i++)
             {
-                string line = lines[i];
+                string line = lines[i].Trim();
                 int j = 0;
-                Token token = (Token)Enum.Parse(typeof(Token), 
-                (string)  line.TakeWhile((cur) => 
-                {
-                    j++;
-                    return char.IsWhiteSpace(cur);
-                }
-                ));
-                List<Identifer> args = new List<Identifer>();
-                byte priority = 0;
                 StringBuilder buffer = new StringBuilder();
-                for (j = j; j < line.Length; j++)
+                try
                 {
-                    char cur = line[j];
-                    if (cur == '(' && priority >= 0)
+                    for (j = 0; !char.IsWhiteSpace(line[j]); j++)
                     {
-                        buffer.Append(cur);
-                        priority++;
+                        try { buffer.Append(line[j]); }
+                        catch { break; }
                     }
-                    else if (cur == ')' && priority > 0)
+                    
+                    Token token = (Token)Enum.Parse(typeof(Token), buffer.ToString().TrimEnd());
+                    buffer.Clear();
+                    List<Identifer> args = new List<Identifer>();
+                    byte priority = 0;
+                    for (j = j; j < line.Length; j++)
                     {
-                        buffer.Append(cur);
-                        priority--;
+                        char cur = line[j];
+                        if (cur == '(')
+                        {
+                            buffer.Append(cur);
+                            priority++;
+                        }
+                        else if (cur == ')' && priority > 0)
+                        {
+                            buffer.Append(cur);
+                            priority--;
+                        }
+                        else if (char.IsWhiteSpace(cur) && priority == 0)
+                        {
+                            args.Add(Identifer.GetIdentifer(buffer.ToString()));
+                            buffer.Clear();
+                        }
+                        else
+                        {
+                            buffer.Append(cur);
+                        }
                     }
-                    else if (char.IsWhiteSpace(cur) && priority == 0)
-                    {
-                        args.Add(Identifer.GetIdentifer(buffer.ToString()));
-                        buffer.Clear();
-                    }
-                    else
-                    {
-                        buffer.Append(cur);
-                    }
+                    expressions.Add(new Expression { token = token, args = args });
                 }
+                catch { } //just skip
             }
 
             //variables for building
@@ -87,12 +86,12 @@ namespace TokensBuilder
                         context.ILGenerator.Emit(OpCodes.Nop);
                         break;
                     case Token.USE:
-                        context.ILGenerator.UsingNamespace(e.args[0].GetValue());
+                        context.ILGenerator.UsingNamespace(e.args[1].GetValue());
                         break;
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
-                        context.type = context.module.DefineType(e.args[0].GetValue());
+                        context.type = context.module.DefineType(e.args[2].GetValue());
                         break;
                     case Token.NEWVAR:
                         break;
@@ -167,12 +166,12 @@ namespace TokensBuilder
                     case Token.IMPLEMENTS:
                         break;
                     case Token.THROW:
-                        context.ILGenerator.ThrowException(Type.GetType(e.args[0].GetValue()));
+                        context.ILGenerator.ThrowException(Type.GetType(e.args[1].GetValue()));
                         break;
                     case Token.CALLCONSTRUCTOR:
                         break;
                     case Token.OVERRIDE:
-                        context.type.SetParent(Type.GetType(e.args[0].GetValue()));
+                        context.type.SetParent(Type.GetType(e.args[1].GetValue()));
                         break;
                     case Token.GET:
                         break;
@@ -201,14 +200,20 @@ namespace TokensBuilder
                         context.ILGenerator.MarkLabel(label);
                         break;
                     case Token.DIRECTIVA:
-                        string directiva_name = e.args[0].GetValue();
+                        string directiva_name = e.args[1].GetValue();
                         if (directiva_name == "outtype")
                         {
-                            context.outputType = (OutputType) Enum.Parse(typeof(OutputType), e.args[1].GetValue(), true);
+                            context.outputType = (PEFileKinds)Enum.Parse(typeof(PEFileKinds), e.args[2].GetValue(), true);
                         }
                         else if (directiva_name == "version")
                         {
-                            context.assembly.GetName().Version = new Version(e.args[1].GetValue());
+                            context.assembly.GetName().Version = new Version(e.args[2].GetValue());
+                        }
+                        else if (directiva_name == "appname")
+                        {
+                            context.appName = e.args[2].GetValue();
+                            context.CreateName();
+                            //context.CreateAssembly();
                         }
                         else
                         {
@@ -221,13 +226,16 @@ namespace TokensBuilder
                         context.EndMethod();
                         break;
                     case Token.NAMESPACE:
-                        namespace_name = e.args[0].GetValue();
+                        namespace_name = e.args[1].GetValue();
                         break;
                     case Token.ENDNAMESPACE:
                         namespace_name = "";
                         break;
                 }
             }
+
+            //close context
+            context.EndScript();
         }
 
         public void CreatePE(string full_name) => context.assembly.Save(full_name);
@@ -236,7 +244,7 @@ namespace TokensBuilder
     public class ContextInfo
     {
         public string appName;
-        public OutputType outputType;
+        public PEFileKinds outputType;
         public AssemblyBuilder assembly;
         public AssemblyName assemblyName;
         public ModuleBuilder module;
@@ -252,9 +260,10 @@ namespace TokensBuilder
         public ContextInfo()
         {
             appName = "";
-            outputType = OutputType.Console;
+            outputType = PEFileKinds.ConsoleApplication;
             assemblyName = new AssemblyName();
             method = null;
+            script = null;
         }
 
         public void EndMethod()
@@ -262,10 +271,29 @@ namespace TokensBuilder
             //pass
         }
 
+        public void CreateName()
+        {
+            assemblyName.Name = appName.Substring(0, appName.LastIndexOf('.'));
+        }
+
         public void CreateAssembly()
         {
             assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
-            module = assembly.DefineDynamicModule(appName, appName + ".dll");
+            module = assembly.DefineDynamicModule(assemblyName.Name);
+        }
+
+        public void InitilizateScript()
+        {
+            type = module.DefineType("TokensApplication");
+            script = type.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, typeof(void), new Type[] { typeof(string[]) });
+            method = script;
+        }
+
+        public void EndScript()
+        {
+            script = method;
+            method = null;
+            assembly.SetEntryPoint(script, outputType);
         }
     }
 }
