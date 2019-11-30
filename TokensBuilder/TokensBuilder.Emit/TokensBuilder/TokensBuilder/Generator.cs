@@ -28,50 +28,58 @@ namespace TokensBuilder
 
             //parse code to expressions
             string[] lines = code.Split('\n', '\r');
-            for (int i = 0; i < lines.Length; i++)
+            try
             {
-                string line = lines[i].Trim();
-                int j = 0;
-                StringBuilder buffer = new StringBuilder();
-                try
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    for (j = 0; !char.IsWhiteSpace(line[j]); j++)
+                    string line = lines[i].Trim();
+                    int j = 0;
+                    StringBuilder buffer = new StringBuilder();
+                    try
                     {
-                        try { buffer.Append(line[j]); }
-                        catch { break; }
+                        for (j = 0; !char.IsWhiteSpace(line[j]); j++)
+                        {
+                            try { buffer.Append(line[j]); }
+                            catch { break; }
+                        }
+                        while (char.IsWhiteSpace(line[j]))
+                        {
+                            j++;
+                        } //skip whitespaces
+                        Token token = (Token)Enum.Parse(typeof(Token), buffer.ToString().TrimEnd());
+                        buffer.Clear();
+                        List<Identifer> args = new List<Identifer>();
+                        byte priority = 0;
+                        for (j = j; j < line.Length; j++)
+                        {
+                            char cur = line[j];
+                            if (cur == '(')
+                            {
+                                buffer.Append(cur);
+                                priority++;
+                            }
+                            else if (cur == ')' && priority > 0)
+                            {
+                                buffer.Append(cur);
+                                priority--;
+                            }
+                            else if (char.IsWhiteSpace(cur) && priority == 0)
+                            {
+                                args.Add(Identifer.GetIdentifer(buffer.ToString()));
+                                buffer.Clear();
+                            }
+                            else
+                            {
+                                buffer.Append(cur);
+                            }
+                        }
+                        args.Add(Identifer.GetIdentifer(buffer.ToString()));
+                        expressions.Add(new Expression { token = token, args = args });
                     }
-                    
-                    Token token = (Token)Enum.Parse(typeof(Token), buffer.ToString().TrimEnd());
-                    buffer.Clear();
-                    List<Identifer> args = new List<Identifer>();
-                    byte priority = 0;
-                    for (j = j; j < line.Length; j++)
-                    {
-                        char cur = line[j];
-                        if (cur == '(')
-                        {
-                            buffer.Append(cur);
-                            priority++;
-                        }
-                        else if (cur == ')' && priority > 0)
-                        {
-                            buffer.Append(cur);
-                            priority--;
-                        }
-                        else if (char.IsWhiteSpace(cur) && priority == 0)
-                        {
-                            args.Add(Identifer.GetIdentifer(buffer.ToString()));
-                            buffer.Clear();
-                        }
-                        else
-                        {
-                            buffer.Append(cur);
-                        }
-                    }
-                    expressions.Add(new Expression { token = token, args = args });
+                    catch { } //just skip
                 }
-                catch { } //just skip
             }
+            catch { }
 
             //variables for building
             string namespace_name = "";
@@ -80,18 +88,19 @@ namespace TokensBuilder
             for (int i = 0; i < expressions.Count; i++)
             {
                 Expression e = expressions[i];
+                Console.WriteLine(e.token + string.Join(" ", e.args));
                 switch (e.token)
                 {
                     case Token.NULL:
                         context.ILGenerator.Emit(OpCodes.Nop);
                         break;
                     case Token.USE:
-                        context.ILGenerator.UsingNamespace(e.args[1].GetValue());
+                        context.ILGenerator.UsingNamespace(e.args[0].GetValue());
                         break;
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
-                        context.type = context.module.DefineType(e.args[2].GetValue());
+                        context.type = context.module.DefineType(e.args[0].GetValue());
                         break;
                     case Token.NEWVAR:
                         break;
@@ -166,12 +175,12 @@ namespace TokensBuilder
                     case Token.IMPLEMENTS:
                         break;
                     case Token.THROW:
-                        context.ILGenerator.ThrowException(Type.GetType(e.args[1].GetValue()));
+                        context.ILGenerator.ThrowException(Type.GetType(e.args[0].GetValue()));
                         break;
                     case Token.CALLCONSTRUCTOR:
                         break;
                     case Token.OVERRIDE:
-                        context.type.SetParent(Type.GetType(e.args[1].GetValue()));
+                        context.type.SetParent(Type.GetType(e.args[0].GetValue()));
                         break;
                     case Token.GET:
                         break;
@@ -200,18 +209,18 @@ namespace TokensBuilder
                         context.ILGenerator.MarkLabel(label);
                         break;
                     case Token.DIRECTIVA:
-                        string directiva_name = e.args[1].GetValue();
+                        string directiva_name = e.args[0].GetValue();
                         if (directiva_name == "outtype")
                         {
-                            context.outputType = (PEFileKinds)Enum.Parse(typeof(PEFileKinds), e.args[2].GetValue(), true);
+                            context.outputType = (PEFileKinds)Enum.Parse(typeof(PEFileKinds), e.args[1].GetValue(), true);
                         }
                         else if (directiva_name == "version")
                         {
-                            context.assembly.GetName().Version = new Version(e.args[2].GetValue());
+                            context.assembly.GetName().Version = new Version(e.args[1].GetValue());
                         }
                         else if (directiva_name == "appname")
                         {
-                            context.appName = e.args[2].GetValue();
+                            context.appName = e.args[1].GetValue();
                             context.CreateName();
                             //context.CreateAssembly();
                         }
@@ -226,7 +235,7 @@ namespace TokensBuilder
                         context.EndMethod();
                         break;
                     case Token.NAMESPACE:
-                        namespace_name = e.args[1].GetValue();
+                        namespace_name = e.args[0].GetValue();
                         break;
                     case Token.ENDNAMESPACE:
                         namespace_name = "";
@@ -273,7 +282,9 @@ namespace TokensBuilder
 
         public void CreateName()
         {
-            assemblyName.Name = appName.Substring(0, appName.LastIndexOf('.'));
+            int index = appName.LastIndexOf('.');
+            if (index <= 0) assemblyName.Name = appName;
+            else assemblyName.Name = appName.Substring(0, index);
         }
 
         public void CreateAssembly()
@@ -293,7 +304,7 @@ namespace TokensBuilder
         {
             script = method;
             method = null;
-            assembly.SetEntryPoint(script, outputType);
+            assembly.SetEntryPoint(script.GetBaseDefinition(), outputType);
         }
     }
 }
