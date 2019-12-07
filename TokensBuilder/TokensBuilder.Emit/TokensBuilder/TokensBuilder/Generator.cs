@@ -18,13 +18,14 @@ namespace TokensBuilder
             context = new ContextInfo();
         }
 
-        public void GenerateIL(string assembly_name, string code)
+        public void GenerateIL(string assembly_name, string code, bool haveScript = true)
         {
             //create context
             context.appName = assembly_name;
             context.CreateName();
             context.CreateAssembly();
-            context.InitilizateScript();
+            context.haveScript = haveScript;
+            if (haveScript) context.InitilizateScript();
 
             //parse code to expressions
             string[] lines = code.Split('\n', '\r');
@@ -82,12 +83,15 @@ namespace TokensBuilder
             catch { }
 
             //variables for building
+            byte entrypoint = 0;
             string namespace_name = "";
+            Dictionary<string, Label> labels = new Dictionary<string, Label>();
 
             //parse expressions
             for (int i = 0; i < expressions.Count; i++)
             {
                 Expression e = expressions[i];
+                string name = e.args[0].GetValue();
                 Console.WriteLine(e.token + string.Join(" ", e.args));
                 switch (e.token)
                 {
@@ -95,12 +99,12 @@ namespace TokensBuilder
                         context.ILGenerator.Emit(OpCodes.Nop);
                         break;
                     case Token.USE:
-                        context.ILGenerator.UsingNamespace(e.args[0].GetValue());
+                        context.ILGenerator.UsingNamespace(name);
                         break;
                     case Token.WRITEVAR:
                         break;
                     case Token.NEWCLASS:
-                        context.type = context.module.DefineType(e.args[0].GetValue());
+                        context.type = context.module.DefineType(name);
                         break;
                     case Token.NEWVAR:
                         break;
@@ -130,6 +134,8 @@ namespace TokensBuilder
                     case Token.CONTINUE:
                         break;
                     case Token.RETURN:
+                        context.AddValue(name);
+                        context.ILGenerator.Emit(OpCodes.Ret);
                         break;
                     case Token.IF:
                         break;
@@ -140,6 +146,9 @@ namespace TokensBuilder
                     case Token.GOTO:
                         break;
                     case Token.LABEL:
+                        Label label = context.ILGenerator.DefineLabel();
+                        context.ILGenerator.MarkLabel(label);
+                        labels.Add(name, label);
                         break;
                     case Token.YIELD:
                         break;
@@ -160,6 +169,10 @@ namespace TokensBuilder
                     case Token.NEWATTRIBUTE:
                         break;
                     case Token.GETATTRIBUTE:
+                        if (name == "Entrypoint")
+                        {
+                            entrypoint = 1;
+                        }
                         break;
                     case Token.GETCONSTRUCTOR:
                         break;
@@ -176,12 +189,12 @@ namespace TokensBuilder
                     case Token.IMPLEMENTS:
                         break;
                     case Token.THROW:
-                        context.ILGenerator.ThrowException(Type.GetType(e.args[0].GetValue()));
+                        context.ILGenerator.ThrowException(Type.GetType(name));
                         break;
                     case Token.CALLCONSTRUCTOR:
                         break;
                     case Token.OVERRIDE:
-                        context.type.SetParent(Type.GetType(e.args[0].GetValue()));
+                        context.type.SetParent(Type.GetType(name));
                         break;
                     case Token.GET:
                         break;
@@ -206,28 +219,32 @@ namespace TokensBuilder
                     case Token.NEWPOINTER:
                         break;
                     case Token.STARTBLOCK:
-                        Label label = context.ILGenerator.DefineLabel();
+                        label = context.ILGenerator.DefineLabel();
                         context.ILGenerator.MarkLabel(label);
                         break;
                     case Token.DIRECTIVA:
-                        string directiva_name = e.args[0].GetValue();
-                        if (directiva_name == "outtype")
+                        if (name == "outtype")
                         {
                             context.outputType = (PEFileKinds)Enum.Parse(typeof(PEFileKinds), e.args[1].GetValue(), true);
                         }
-                        else if (directiva_name == "version")
+                        else if (name == "version")
                         {
                             context.assembly.GetName().Version = new Version(e.args[1].GetValue());
                         }
-                        else if (directiva_name == "appname")
+                        else if (name == "appname")
                         {
                             context.appName = e.args[1].GetValue();
                             context.CreateName();
-                            //context.CreateAssembly();
+                        }
+                        else if (name == "enable")
+                        {
+                            string arg = e.args[1].GetValue();
+                            if (arg == "script") context.haveScript = true;
+                            else if (arg == "entrypoint") context.haveScript = false;
                         }
                         else
                         {
-                            throw new NotSupportedException($"Directiva by name {directiva_name} not found (TokensError in line {i})");
+                            throw new NotSupportedException($"Directiva by name {name} not found (TokensError in line {i})");
                         }
                         break;
                     case Token.ENDCLASS:
@@ -332,6 +349,30 @@ namespace TokensBuilder
             else
             {
                 throw new InvalidOperationException("Cannot end script in none-script program (TokensError)");
+            }
+        }
+
+        public void AddValue(string value)
+        {
+            if (value.StartsWith("var "))
+            {
+                ILGenerator.Emit(OpCodes.Ldfld, module.GetField(value.Remove(0, 4)));
+            }
+            else if (value.StartsWith("string "))
+            {
+                ILGenerator.Emit(OpCodes.Ldstr, value.Remove(0, 7));
+            }
+            else if (value.StartsWith("native int "))
+            {
+                ILGenerator.Emit(OpCodes.Ldind_I, value.Remove(0, 11));
+            }
+            else if (value == "null")
+            {
+                ILGenerator.Emit(OpCodes.Ldnull);
+            }
+            else
+            {
+                throw new InvalidCastException(value + " is not value (TokensError)");
             }
         }
     }
