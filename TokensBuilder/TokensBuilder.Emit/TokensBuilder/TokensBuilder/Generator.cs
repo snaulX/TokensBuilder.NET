@@ -116,6 +116,7 @@ namespace TokensBuilder
                     case Token.GETFUNC:
                         break;
                     case Token.RUNFUNC:
+                        context.ILGenerator.Emit(OpCodes.Nop);
                         break;
                     case Token.WHILE:
                         break;
@@ -230,6 +231,8 @@ namespace TokensBuilder
                         }
                         break;
                     case Token.ENDCLASS:
+                        context.type.CreateType();
+                        context.type = null;
                         break;
                     case Token.ENDMETHOD:
                         context.EndMethod();
@@ -245,6 +248,7 @@ namespace TokensBuilder
 
             //close context
             context.EndScript();
+            context.EndWrite();
         }
 
         public void CreatePE(string full_name) => context.assembly.Save(full_name);
@@ -252,12 +256,13 @@ namespace TokensBuilder
 
     public class ContextInfo
     {
+        public bool haveScript;
         public string appName;
         public PEFileKinds outputType;
         public AssemblyBuilder assembly;
         public AssemblyName assemblyName;
         public ModuleBuilder module;
-        public TypeBuilder type;
+        public TypeBuilder type, mainType;
         public MethodBuilder method, script;
         public FieldBuilder field;
         public ConstructorBuilder constructor;
@@ -273,6 +278,14 @@ namespace TokensBuilder
             assemblyName = new AssemblyName();
             method = null;
             script = null;
+            haveScript = true;
+        }
+
+        public void EndWrite()
+        {
+            try { type.CreateType(); }
+            catch { }
+            mainType.CreateType();
         }
 
         public void EndMethod()
@@ -291,20 +304,35 @@ namespace TokensBuilder
         {
             assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
             module = assembly.DefineDynamicModule(assemblyName.Name);
+            if (haveScript) mainType = module.DefineType(appName + "Main", TypeAttributes.Class);
         }
 
         public void InitilizateScript()
         {
-            type = module.DefineType("TokensApplication");
-            script = type.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, typeof(void), new Type[] { typeof(string[]) });
-            method = script;
+            if (haveScript)
+            {
+                script = mainType.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, typeof(void), new Type[] { typeof(string[]) });
+                method = script;
+            }
+            else
+            {
+                throw new InvalidOperationException("Cannot initilizate script in none-script program (TokensError)");
+            }
         }
 
         public void EndScript()
         {
-            script = method;
-            method = null;
-            assembly.SetEntryPoint(script.GetBaseDefinition(), outputType);
+            if (haveScript)
+            {
+                ILGenerator.Emit(OpCodes.Ret);
+                script = method;
+                method = null;
+                assembly.SetEntryPoint(script.GetBaseDefinition(), outputType);
+            }
+            else
+            {
+                throw new InvalidOperationException("Cannot end script in none-script program (TokensError)");
+            }
         }
     }
 }
