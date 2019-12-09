@@ -230,6 +230,7 @@ namespace TokensBuilder
                         else if (name == "version")
                         {
                             context.assembly.GetName().Version = new Version(e.args[1].GetValue());
+                            context.CreateName();
                         }
                         else if (name == "appname")
                         {
@@ -264,7 +265,7 @@ namespace TokensBuilder
             }
 
             //close context
-            context.EndScript();
+            if (context.haveScript) context.EndScript();
             context.EndWrite();
         }
 
@@ -365,6 +366,30 @@ namespace TokensBuilder
             else if (value.StartsWith("native int "))
             {
                 ILGenerator.Emit(OpCodes.Ldind_I, value.Remove(0, 11));
+            }
+            else if (value.StartsWith("byte "))
+            {
+                ILGenerator.Emit(OpCodes.Ldind_I1, value.Remove(0, 5));
+            }
+            else if (value.StartsWith("short "))
+            {
+                ILGenerator.Emit(OpCodes.Ldind_I2, value.Remove(0, 6));
+            }
+            else if (value.StartsWith("int "))
+            {
+                ILGenerator.Emit(OpCodes.Ldind_I4, value.Remove(0, 4));
+            }
+            else if (value.StartsWith("long "))
+            {
+                ILGenerator.Emit(OpCodes.Ldind_I8, value.Remove(0, 5));
+            }
+            else if (value.StartsWith("float "))
+            {
+                ILGenerator.Emit(OpCodes.Ldind_R4, value.Remove(0, 6));
+            }
+            else if (value.StartsWith("double "))
+            {
+                ILGenerator.Emit(OpCodes.Ldind_R8, value.Remove(0, 7));
             }
             else if (value == "null")
             {
