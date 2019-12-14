@@ -4,9 +4,40 @@ using System.Reflection.Emit;
 using System.Reflection;
 using TokensAPI;
 using System.Text;
+using System.Linq;
 
 namespace TokensBuilder
 {
+    enum BlockType
+    {
+        DEFAULT,
+        IF,
+        ELIF,
+        ELSE,
+        WHILE,
+        FOR,
+        FOREACH,
+        SWITCH,
+        MODULE,
+        NAMESPACE,
+        CLASS,
+        INTERFACE,
+        STRUCT,
+        ENUM,
+        METHOD,
+        CONSTRUCTOR,
+        GET,
+        SET,
+        TRY,
+        CATCH,
+        FINALLY,
+        /// <summary>
+        /// For exmaple: <code>MyClass a = new MyClass { field = 0, kek = 1, lol = "lol" };</code>
+        /// </summary>
+        INIT,
+        ENTRYPOINT
+    }
+
     public class Generator
     {
         public ContextInfo context;
@@ -83,7 +114,7 @@ namespace TokensBuilder
             catch { }
 
             //variables for building
-            byte entrypoint = 0;
+            List<BlockType> blockType = new List<BlockType> { BlockType.DEFAULT };
             string namespace_name = "";
             Dictionary<string, Label> labels = new Dictionary<string, Label>();
 
@@ -103,24 +134,47 @@ namespace TokensBuilder
                         break;
                     case Token.WRITEVAR:
                         break;
-                    case Token.NEWCLASS:
+                    case Token.CLASS:
                         context.type = context.module.DefineType(name);
+                        blockType.Add(BlockType.CLASS);
                         break;
-                    case Token.NEWVAR:
+                    case Token.FIELD:
                         break;
-                    case Token.NEWFUNC:
+                    case Token.METHOD:
+                        if (blockType.Count == 1)
+                        {
+                            Type type = Type.GetType(name);
+                            if (type != null)
+                            {
+                                //extension function
+                            }
+                            else if (haveScript)
+                            {
+                                //script function
+                                List<Identifer> argums = e.args.GetRange(1, e.args.Count);
+                                for (int j = 0; j < argums.Count; j++)
+                                {
+                                    string attr = argums[j].GetValue();
+                                }
+                                context.method = context.mainType.DefineMethod(name, MethodAttributes.Public);
+                            }
+                            else
+                            {
+                                throw new Exception("Cannot initiliaze method without class");
+                            }
+                        }
+                        else
+                        {
+                            blockType.Add(BlockType.METHOD);
+                        }
                         break;
                     case Token.END:
-                        context.ILGenerator.Emit(OpCodes.Br);
-                        break;
-                    case Token.GETCLASS:
-                        break;
-                    case Token.GETVAR:
-                        break;
-                    case Token.GETFUNC:
+                        blockType.RemoveAt(blockType.Count - 1);
+                        //context.ILGenerator.Emit(OpCodes.Br);
                         break;
                     case Token.RUNFUNC:
-                        context.ILGenerator.Emit(OpCodes.Nop);
+                        for (int j = 2; j < e.args.Count; j++) context.LoadValue(e.args[i].GetValue()); 
+                        context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue()));
                         break;
                     case Token.WHILE:
                         break;
@@ -134,7 +188,7 @@ namespace TokensBuilder
                     case Token.CONTINUE:
                         break;
                     case Token.RETURN:
-                        context.AddValue(name);
+                        context.LoadValue(name);
                         context.ILGenerator.Emit(OpCodes.Ret);
                         break;
                     case Token.IF:
@@ -151,34 +205,36 @@ namespace TokensBuilder
                         labels.Add(name, label);
                         break;
                     case Token.YIELD:
+                        if (context.method.ReturnType is IEnumerable<object>)
+                        {
+                            //pass
+                        }
                         break;
                     case Token.GETLINK:
                         break;
                     case Token.WRITEINPOINTER:
                         break;
-                    case Token.NEWSTRUCT:
+                    case Token.STRUCT:
                         break;
-                    case Token.NEWINTERFACE:
+                    case Token.INTERFACE:
                         break;
-                    case Token.NEWENUM:
+                    case Token.ENUM:
                         break;
-                    case Token.NEWMODULE:
+                    case Token.MODULE:
                         break;
-                    case Token.NEWCONSTRUCTOR:
+                    case Token.CONSTRUCTOR:
                         break;
-                    case Token.NEWATTRIBUTE:
-                        break;
-                    case Token.GETATTRIBUTE:
+                    case Token.ATTRIBUTE:
                         if (name == "Entrypoint")
                         {
-                            entrypoint = 1;
+                            blockType.Add(BlockType.ENTRYPOINT);
                         }
                         break;
                     case Token.GETCONSTRUCTOR:
                         break;
                     case Token.OPCODEADD:
                         break;
-                    case Token.NEWEVENT:
+                    case Token.EVENT:
                         break;
                     case Token.GETEVENT:
                         break;
@@ -201,10 +257,9 @@ namespace TokensBuilder
                     case Token.SET:
                         break;
                     case Token.TYPEOF:
+                        context.ILGenerator.Emit(OpCodes.Ldobj, Type.GetType(name));
                         break;
                     case Token.CONST:
-                        break;
-                    case Token.OPERATOR:
                         break;
                     case Token.ASYNC:
                         break;
@@ -248,18 +303,11 @@ namespace TokensBuilder
                             throw new NotSupportedException($"Directiva by name {name} not found (TokensError in line {i})");
                         }
                         break;
-                    case Token.ENDCLASS:
-                        context.type.CreateType();
-                        context.type = null;
-                        break;
-                    case Token.ENDMETHOD:
-                        context.EndMethod();
-                        break;
                     case Token.NAMESPACE:
                         namespace_name = e.args[0].GetValue();
                         break;
-                    case Token.ENDNAMESPACE:
-                        namespace_name = "";
+                    case Token.BREAKPOINT:
+                        context.ILGenerator.Emit(OpCodes.Break);
                         break;
                 }
             }
@@ -329,7 +377,7 @@ namespace TokensBuilder
         {
             if (haveScript)
             {
-                script = mainType.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, typeof(void), new Type[] { typeof(string[]) });
+                script = mainType.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, CallingConventions.Any,typeof(void), new Type[] { typeof(string[]) });
                 method = script;
             }
             else
@@ -353,47 +401,38 @@ namespace TokensBuilder
             }
         }
 
-        public void AddValue(string value)
+        public void LoadValue(string value)
         {
-            if (value.StartsWith("var "))
+            if (value[0] == '\"' && value[value.Length - 1] == '\"')
             {
-                ILGenerator.Emit(OpCodes.Ldfld, module.GetField(value.Remove(0, 4)));
+                ILGenerator.Emit(OpCodes.Ldstr, value.Substring(1, value.Length - 2));
             }
-            else if (value.StartsWith("string "))
+            else if (int.TryParse(value, out int a))
             {
-                ILGenerator.Emit(OpCodes.Ldstr, value.Remove(0, 7));
+                ILGenerator.Emit(OpCodes.Ldc_I4, a);
             }
-            else if (value.StartsWith("native int "))
+            else if (long.TryParse(value, out long b))
             {
-                ILGenerator.Emit(OpCodes.Ldind_I, value.Remove(0, 11));
+                ILGenerator.Emit(OpCodes.Ldc_I8, b);
             }
-            else if (value.StartsWith("byte "))
+            else if (float.TryParse(value, out float c))
             {
-                ILGenerator.Emit(OpCodes.Ldind_I1, value.Remove(0, 5));
+                ILGenerator.Emit(OpCodes.Ldc_R4, c);
             }
-            else if (value.StartsWith("short "))
+            else if (double.TryParse(value, out double d))
             {
-                ILGenerator.Emit(OpCodes.Ldind_I2, value.Remove(0, 6));
-            }
-            else if (value.StartsWith("int "))
-            {
-                ILGenerator.Emit(OpCodes.Ldind_I4, value.Remove(0, 4));
-            }
-            else if (value.StartsWith("long "))
-            {
-                ILGenerator.Emit(OpCodes.Ldind_I8, value.Remove(0, 5));
-            }
-            else if (value.StartsWith("float "))
-            {
-                ILGenerator.Emit(OpCodes.Ldind_R4, value.Remove(0, 6));
-            }
-            else if (value.StartsWith("double "))
-            {
-                ILGenerator.Emit(OpCodes.Ldind_R8, value.Remove(0, 7));
+                ILGenerator.Emit(OpCodes.Ldc_R8, d);
             }
             else if (value == "null")
             {
                 ILGenerator.Emit(OpCodes.Ldnull);
+            }
+            else if (value[0] == '[' && value[value.Length - 1] == ']')
+            {
+                value = value.Remove(0, 6);
+                string typename = (string) value.TakeWhile((ch) => !char.IsWhiteSpace(ch));
+                value = value.Remove(0, typename.Length);
+                ILGenerator.Emit(OpCodes.Newarr, Type.GetType(typename));
             }
             else
             {

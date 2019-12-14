@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>C:\Users\User\Desktop\World of Legends\TokensBuilder\tokensbuilder-dotnet\TokensBuilder\TokensBuilder.NETFramework\TokensBuilder\bin\</OutputPath>
+    <OutputPath>C:\Users\User\Desktop\World of Legends\TokensBuilder\tokensbuilder-dotnet\TokensBuilder\TokensBuilder.Emit\TokensBuilder\TokensBuilder\bin\Debug\</OutputPath>
   </PropertyGroup>
 
 </Project>

@@ -17,31 +17,19 @@
         /// <summary>
         /// Create new default class
         /// </summary>
-        NEWCLASS,
+        CLASS,
         /// <summary>
         /// Create new variable
         /// </summary>
-        NEWVAR,
+        FIELD,
         /// <summary>
         /// Create new function
         /// </summary>
-        NEWFUNC,
+        METHOD,
         /// <summary>
         /// End of block
         /// </summary>
         END,
-        /// <summary>
-        /// Get class
-        /// </summary>
-        GETCLASS,
-        /// <summary>
-        /// Get variable
-        /// </summary>
-        GETVAR,
-        /// <summary>
-        /// Get function
-        /// </summary>
-        GETFUNC,
         /// <summary>
         /// Run function
         /// </summary>
@@ -105,31 +93,27 @@
         /// <summary>
         /// Create structure
         /// </summary>
-        NEWSTRUCT,
+        STRUCT,
         /// <summary>
         /// Create interface
         /// </summary>
-        NEWINTERFACE,
+        INTERFACE,
         /// <summary>
         /// Create enumeration
         /// </summary>
-        NEWENUM,
+        ENUM,
         /// <summary>
         /// Create module
         /// </summary>
-        NEWMODULE,
+        MODULE,
         /// <summary>
         /// Create constructor
         /// </summary>
-        NEWCONSTRUCTOR,
+        CONSTRUCTOR,
         /// <summary>
-        /// Create attribute
+        /// Use attribute
         /// </summary>
-        NEWATTRIBUTE,
-        /// <summary>
-        /// Find and get attribute
-        /// </summary>
-        GETATTRIBUTE,
+        ATTRIBUTE,
         /// <summary>
         /// Find and get constructor
         /// </summary>
@@ -141,7 +125,7 @@
         /// <summary>
         /// Create new event type
         /// </summary>
-        NEWEVENT,
+        EVENT,
         /// <summary>
         /// Get event 
         /// </summary>
@@ -177,8 +161,6 @@
         /// Pre-compiler directiva
         /// </summary>
         DIRECTIVA,
-        ENDCLASS,
-        ENDMETHOD,
         /// <summary>
         /// Get all classes, methods and etc from other tokens
         /// </summary>
@@ -199,6 +181,9 @@
         /// It`s just multiline commentary
         /// </summary>
         MULTICOMMENT,
-        ENDNAMESPACE
+        /// <summary>
+        /// Mark breakpoint
+        /// </summary>
+        BREAKPOINT
     }
 }
