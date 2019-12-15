@@ -192,12 +192,16 @@ namespace TokensBuilder
                         context.ILGenerator.Emit(OpCodes.Ret);
                         break;
                     case Token.IF:
+                        blockType.Add(BlockType.IF);
                         break;
                     case Token.ELSE:
+                        blockType.Add(BlockType.ELSE);
                         break;
                     case Token.ELIF:
+                        blockType.Add(BlockType.ELIF);
                         break;
                     case Token.GOTO:
+                        context.ILGenerator.Emit(OpCodes.Jmp, labels[name]);
                         break;
                     case Token.LABEL:
                         Label label = context.ILGenerator.DefineLabel();
@@ -233,14 +237,19 @@ namespace TokensBuilder
                     case Token.GETCONSTRUCTOR:
                         break;
                     case Token.OPCODEADD:
+                        context.ILGenerator.Emit((OpCode) typeof(OpCodes).GetField(name).GetValue(null));
                         break;
                     case Token.EVENT:
                         break;
                     case Token.GETEVENT:
                         break;
                     case Token.TRY:
+                        blockType.Add(BlockType.TRY);
                         break;
                     case Token.CATCH:
+                        try { context.ILGenerator.BeginCatchBlock(Type.GetType(name)); }
+                        catch { context.ILGenerator.BeginCatchBlock(typeof(Exception)); }
+                        blockType.Add(BlockType.CATCH);
                         break;
                     case Token.IMPLEMENTS:
                         break;
@@ -308,6 +317,41 @@ namespace TokensBuilder
                         break;
                     case Token.BREAKPOINT:
                         context.ILGenerator.Emit(OpCodes.Break);
+                        break;
+                    case Token.ADD:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Add);
+                        break;
+                    case Token.SUB:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Sub);
+                        break;
+                    case Token.DIV:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Div);
+                        break;
+                    case Token.MUL:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Mul);
+                        break;
+                    case Token.MOD:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Rem);
                         break;
                 }
             }
@@ -433,6 +477,10 @@ namespace TokensBuilder
                 string typename = (string) value.TakeWhile((ch) => !char.IsWhiteSpace(ch));
                 value = value.Remove(0, typename.Length);
                 ILGenerator.Emit(OpCodes.Newarr, Type.GetType(typename));
+            }
+            else if (value.StartsWith("new "))
+            {
+                value = value.Remove(0, 4);
             }
             else
             {

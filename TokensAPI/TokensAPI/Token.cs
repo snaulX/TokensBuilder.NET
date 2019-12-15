@@ -184,6 +184,26 @@
         /// <summary>
         /// Mark breakpoint
         /// </summary>
-        BREAKPOINT
+        BREAKPOINT,
+        /// <summary>
+        /// Operator for addition '+'
+        /// </summary>
+        ADD,
+        /// <summary>
+        /// Operator for substraction '-'
+        /// </summary>
+        SUB,
+        /// <summary>
+        /// Operator for divise '/'
+        /// </summary>
+        DIV,
+        /// <summary>
+        /// Operator for multiply '*'
+        /// </summary>
+        MUL,
+        /// <summary>
+        /// Operator for modulo '%'
+        /// </summary>
+        MOD
     }
 }
