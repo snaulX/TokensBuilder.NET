@@ -1,6 +1,6 @@
 ﻿namespace TokensAPI
 {
-    public enum Token
+    public enum Token : byte
     {
         /// <summary>
         /// Token does not exist. Just none
@@ -83,10 +83,6 @@
         /// </summary>
         YIELD,
         /// <summary>
-        /// Get link
-        /// </summary>
-        GETLINK,
-        /// <summary>
         /// Write value to variable by pointer
         /// </summary>
         WRITEINPOINTER,
@@ -155,7 +151,7 @@
         SWITCH,
         CASE,
         DEFAULT,
-        NEWPOINTER,
+        POINTER,
         STARTBLOCK,
         /// <summary>
         /// Pre-compiler directiva
