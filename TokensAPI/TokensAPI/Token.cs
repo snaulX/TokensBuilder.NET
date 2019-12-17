@@ -83,10 +83,6 @@
         /// </summary>
         YIELD,
         /// <summary>
-        /// Write value to variable by pointer
-        /// </summary>
-        WRITEINPOINTER,
-        /// <summary>
         /// Create structure
         /// </summary>
         STRUCT,
@@ -138,20 +134,45 @@
         /// Create implementation of interface in the class block
         /// </summary>
         IMPLEMENTS,
+        /// <summary>
+        /// Operator throw
+        /// </summary>
         THROW,
-        CALLCONSTRUCTOR,
         OVERRIDE,
+        /// <summary>
+        /// Create getter of property
+        /// </summary>
         GET,
+        /// <summary>
+        /// Create setter of property
+        /// </summary>
         SET,
+        /// <summary>
+        /// Operator typeof
+        /// </summary>
         TYPEOF,
+        /// <summary>
+        /// Create constant
+        /// </summary>
         CONST,
+        /// <summary>
+        /// Create operator
+        /// </summary>
         OPERATOR,
+        /// <summary>
+        /// Create async method
+        /// </summary>
         ASYNC,
+        /// <summary>
+        /// Operator await
+        /// </summary>
         AWAIT,
+        /// <summary>
+        /// Operator awitch
+        /// </summary>
         SWITCH,
         CASE,
         DEFAULT,
-        POINTER,
         STARTBLOCK,
         /// <summary>
         /// Pre-compiler directiva
@@ -200,6 +221,38 @@
         /// <summary>
         /// Operator for modulo '%'
         /// </summary>
-        MOD
+        MOD,
+        /// <summary>
+        /// Operator greater '>'
+        /// </summary>
+        CGT,
+        /// <summary>
+        /// Operator lower
+        /// </summary>
+        CLT,
+        /// <summary>
+        /// Operator equals '=='
+        /// </summary>
+        CEQ,
+        /// <summary>
+        /// Operator and '&&'
+        /// </summary>
+        AND,
+        /// <summary>
+        /// Operator or '||'
+        /// </summary>
+        OR,
+        /// <summary>
+        /// Operator and '|'
+        /// </summary>
+        XOR,
+        /// <summary>
+        /// Operator and '!'
+        /// </summary>
+        NOT,
+        /// <summary>
+        /// Operator sizeof
+        /// </summary>
+        SIZEOF
     }
 }

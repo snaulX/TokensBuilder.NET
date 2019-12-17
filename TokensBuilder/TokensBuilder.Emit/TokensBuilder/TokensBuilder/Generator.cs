@@ -114,6 +114,7 @@ namespace TokensBuilder
             List<BlockType> blockType = new List<BlockType> { BlockType.DEFAULT };
             string namespace_name = "";
             Dictionary<string, Label> labels = new Dictionary<string, Label>();
+            bool tryBlock = false;
 
             //parse expressions
             for (int i = 0; i < expressions.Count; i++)
@@ -140,6 +141,8 @@ namespace TokensBuilder
                         }
                         break;
                     case Token.CLASS:
+                        if (namespace_name != string.Empty)
+                            name = namespace_name + '.' + name;
                         context.type = context.module.DefineType(name);
                         blockType.Add(BlockType.CLASS);
                         break;
@@ -172,17 +175,17 @@ namespace TokensBuilder
                         }
                         else
                         {
-                            blockType.Add(BlockType.METHOD);
+                            MethodBuilder method = context.type.DefineMethod(name, MethodAttributes.HideBySig);
+                            context.method = method;
                         }
+                        blockType.Add(BlockType.METHOD);
                         break;
                     case Token.END:
-                        BlockType last = blockType[blockType.Count - 1];
+                        BlockType last = blockType[blockType.Count - 1]; //get current block
                         if (last == BlockType.DEFAULT) context.ILGenerator.Emit(OpCodes.Br);
+                        else if (last == BlockType.TRY) tryBlock = true;
                         else if (last == BlockType.CATCH) context.ILGenerator.EndExceptionBlock();
-                        else if (last == BlockType.METHOD)
-                        {
-                            context.EndMethod();
-                        }
+                        else if (last == BlockType.METHOD) context.EndMethod();
                         else if (last == BlockType.GET)
                         {
                             context.property.SetGetMethod(context.method);
@@ -194,7 +197,7 @@ namespace TokensBuilder
                             context.EndMethod();
                         }
 
-                        blockType.RemoveAt(blockType.Count - 1);
+                        blockType.RemoveAt(blockType.Count - 1); //end (remove) current block
                         break;
                     case Token.RUNFUNC:
                         for (int j = 2; j < e.args.Count; j++) context.LoadValue(e.args[i].GetValue()); 
@@ -245,8 +248,6 @@ namespace TokensBuilder
                             throw new InvalidOperationException("Yield can be used in method only with return type IEnumerable");
                         }
                         break;
-                    case Token.WRITEINPOINTER:
-                        break;
                     case Token.STRUCT:
                         blockType.Add(BlockType.STRUCT);
                         break;
@@ -276,14 +277,17 @@ namespace TokensBuilder
                     case Token.GETEVENT:
                         break;
                     case Token.TRY:
+                        context.ILGenerator.BeginExceptionBlock();
                         blockType.Add(BlockType.TRY);
                         break;
                     case Token.CATCH:
+                        if (!tryBlock) throw new Exception("Catch-block cannot be without try-block");
                         try { context.ILGenerator.BeginCatchBlock(Type.GetType(name)); }
                         catch { context.ILGenerator.BeginCatchBlock(typeof(Exception)); }
                         blockType.Add(BlockType.CATCH);
                         break;
                     case Token.IMPLEMENTS:
+                        context.type.AddInterfaceImplementation(Type.GetType(name));
                         break;
                     case Token.THROW:
                         context.ILGenerator.ThrowException(Type.GetType(name));
@@ -375,6 +379,41 @@ namespace TokensBuilder
                             context.LoadValue(identifer.GetValue());
                         }
                         context.ILGenerator.Emit(OpCodes.Rem);
+                        break;
+                    case Token.AND:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.And);
+                        break;
+                    case Token.OR:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Or);
+                        break;
+                    case Token.XOR:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Xor);
+                        break;
+                    case Token.NOT:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Not);
+                        break;
+                    case Token.CEQ:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Ceq);
                         break;
                 }
             }
