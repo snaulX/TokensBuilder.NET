@@ -19,7 +19,6 @@ namespace TokensBuilder
         FOREACH,
         SWITCH,
         MODULE,
-        NAMESPACE,
         CLASS,
         INTERFACE,
         STRUCT,
@@ -112,7 +111,7 @@ namespace TokensBuilder
 
             //variables for building
             List<BlockType> blockType = new List<BlockType> { BlockType.DEFAULT };
-            string namespace_name = "";
+            string namespace_name = "", statement = "";
             Dictionary<string, Label> labels = new Dictionary<string, Label>();
             bool tryBlock = false;
 
@@ -143,7 +142,7 @@ namespace TokensBuilder
                     case Token.CLASS:
                         if (namespace_name != string.Empty)
                             name = namespace_name + '.' + name;
-                        context.type = context.module.DefineType(name);
+                        context.type = context.module.DefineType(name, TypeAttributes.Class);
                         blockType.Add(BlockType.CLASS);
                         break;
                     case Token.FIELD:
@@ -196,17 +195,24 @@ namespace TokensBuilder
                             context.property.SetSetMethod(context.method);
                             context.EndMethod();
                         }
+                        else if (last == BlockType.WHILE || last == BlockType.FOR || last == BlockType.FOREACH)
+                        {
+                            //pass
+                        }
 
                         blockType.RemoveAt(blockType.Count - 1); //end (remove) current block
                         break;
                     case Token.RUNFUNC:
-                        for (int j = 2; j < e.args.Count; j++) context.LoadValue(e.args[i].GetValue()); 
+                        try { for (int j = 2; j < e.args.Count; j++) context.LoadValue(e.args[i].GetValue()); }
+                        catch { }
                         context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue()));
                         break;
                     case Token.WHILE:
+                        statement = name;
                         blockType.Add(BlockType.WHILE);
                         break;
                     case Token.FOR:
+                        statement = name;
                         blockType.Add(BlockType.FOR);
                         break;
                     case Token.FOREACH:
@@ -216,6 +222,7 @@ namespace TokensBuilder
                         context.ILGenerator.Emit(OpCodes.Br);
                         break;
                     case Token.CONTINUE:
+                        context.ILGenerator.Emit(OpCodes.Br_S);
                         break;
                     case Token.RETURN:
                         context.LoadValue(name);
@@ -249,12 +256,21 @@ namespace TokensBuilder
                         }
                         break;
                     case Token.STRUCT:
+                        if (namespace_name != string.Empty)
+                            name = namespace_name + '.' + name;
+                        context.type = context.module.DefineType(name);
                         blockType.Add(BlockType.STRUCT);
                         break;
                     case Token.INTERFACE:
+                        if (namespace_name != string.Empty)
+                            name = namespace_name + '.' + name;
+                        context.type = context.module.DefineType(name, TypeAttributes.Interface);
                         blockType.Add(BlockType.INTERFACE);
                         break;
                     case Token.ENUM:
+                        if (namespace_name != string.Empty)
+                            name = namespace_name + '.' + name;
+                        context.enumBuilder = context.module.DefineEnum(name, TypeAttributes.NotPublic, typeof(int));
                         blockType.Add(BlockType.ENUM);
                         break;
                     case Token.MODULE:
@@ -435,6 +451,7 @@ namespace TokensBuilder
         public AssemblyName assemblyName;
         public ModuleBuilder module;
         public TypeBuilder type, mainType;
+        public EnumBuilder enumBuilder;
         public MethodBuilder method, script;
         public FieldBuilder field;
         public PropertyBuilder property;
@@ -457,7 +474,7 @@ namespace TokensBuilder
 
         public void EndWrite()
         {
-            try { type.CreateType(); }
+            try { type.CreateType(); enumBuilder.CreateType(); }
             catch { }
             mainType.CreateType();
         }
@@ -531,6 +548,11 @@ namespace TokensBuilder
             {
                 ILGenerator.Emit(OpCodes.Ldc_R8, d);
             }
+            else if (bool.TryParse(value, out bool e))
+            {
+                if (e) ILGenerator.Emit(OpCodes.Ldc_I4_1);
+                else ILGenerator.Emit(OpCodes.Ldc_I4_0);
+            }
             else if (value == "null")
             {
                 ILGenerator.Emit(OpCodes.Ldnull);
@@ -578,6 +600,10 @@ namespace TokensBuilder
             {
                 return d;
             }
+            else if (bool.TryParse(value, out bool e))
+            {
+                return e;
+            }
             else if (value == "null")
             {
                 return null;
@@ -596,8 +622,21 @@ namespace TokensBuilder
             }
             else
             {
-                throw new InvalidCastException(value + " is not value (TokensError)");
+                string[] members = value.Split('.');
+                if (members.Length > 1)
+                {
+                    throw new Exception("It`s only on time");
+                }
+                else
+                {
+                    throw new InvalidCastException(value + " is not value (TokensError)");
+                }
             }
+        }
+
+        public bool ParseStatement(string statement)
+        {
+            return false;
         }
     }
 }
