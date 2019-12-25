@@ -31,7 +31,8 @@ namespace TokensBuilder
         CATCH,
         FINALLY,
         ENTRYPOINT,
-        ASYNC
+        ASYNC,
+        EVENT
     }
 
     public class Generator
@@ -199,13 +200,14 @@ namespace TokensBuilder
                         {
                             //pass
                         }
+                        else if (last == BlockType.EVENT) context.eventBuilder = null;
 
                         blockType.RemoveAt(blockType.Count - 1); //end (remove) current block
                         break;
                     case Token.RUNFUNC:
                         try { for (int j = 2; j < e.args.Count; j++) context.LoadValue(e.args[i].GetValue()); }
                         catch { }
-                        context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue()));
+                        context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue())); 
                         break;
                     case Token.WHILE:
                         statement = name;
@@ -289,6 +291,8 @@ namespace TokensBuilder
                         context.ILGenerator.Emit((OpCode) typeof(OpCodes).GetField(name).GetValue(null));
                         break;
                     case Token.EVENT:
+                        context.eventBuilder = context.type.DefineEvent(name, EventAttributes.None, Type.GetType(e.args[1].GetValue()));
+                        blockType.Add(BlockType.EVENT);
                         break;
                     case Token.GETEVENT:
                         break;
@@ -457,10 +461,8 @@ namespace TokensBuilder
         public PropertyBuilder property;
         public LocalBuilder local;
         public ConstructorBuilder constructor;
-        public ILGenerator ILGenerator
-        {
-            get => method.GetILGenerator();
-        }
+        public EventBuilder eventBuilder;
+        public ILGenerator ILGenerator => method.GetILGenerator();
 
         public ContextInfo()
         {

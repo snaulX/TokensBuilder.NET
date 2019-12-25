@@ -43,7 +43,7 @@ namespace TokensBuilder
             //variables for building
             List<string> check_namespaces = new List<string>();
             Dictionary<string, string> labels = new Dictionary<string, string>();
-            short ifLabels = 0, whileLabels = 0;
+            short ifLabels = 0, whileLabels = 0, forLabels = 0, foreachLabels = 0;
             string namespace_name = "";
 
             //parse expressions
