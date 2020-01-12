@@ -11,6 +11,10 @@
         /// </summary>
         USE,
         /// <summary>
+        /// Import all classes and methods and modules from other assembly (in compilation-time)
+        /// </summary>
+        INCLUDE,
+        /// <summary>
         /// Set to varible new value
         /// </summary>
         WRITEVAR,

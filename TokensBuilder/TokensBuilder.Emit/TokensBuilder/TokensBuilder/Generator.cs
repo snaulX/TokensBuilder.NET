@@ -114,7 +114,7 @@ namespace TokensBuilder
             List<BlockType> blockType = new List<BlockType> { BlockType.DEFAULT };
             string namespace_name = "", statement = "";
             Dictionary<string, Label> labels = new Dictionary<string, Label>();
-            bool tryBlock = false;
+            bool tryBlock = false, haveReturn = false;
 
             //parse expressions
             for (int i = 0; i < expressions.Count; i++)
@@ -129,6 +129,13 @@ namespace TokensBuilder
                         break;
                     case Token.USE:
                         context.ILGenerator.UsingNamespace(name);
+                        break;
+                    case Token.INCLUDE:
+                        Assembly includedAssembly = Assembly.LoadFrom(name);
+                        /*foreach (Type type in includedAssembly.GetExportedTypes())
+                        {
+                            //pass
+                        }*/
                         break;
                     case Token.WRITEVAR:
                         try
@@ -185,29 +192,54 @@ namespace TokensBuilder
                         if (last == BlockType.DEFAULT) context.ILGenerator.Emit(OpCodes.Br);
                         else if (last == BlockType.TRY) tryBlock = true;
                         else if (last == BlockType.CATCH) context.ILGenerator.EndExceptionBlock();
-                        else if (last == BlockType.METHOD) context.EndMethod();
+                        else if (last == BlockType.METHOD)
+                        {
+                            if (context.method.ReturnType == typeof(void))
+                            {
+                                if (!haveReturn) context.ILGenerator.Emit(OpCodes.Ret);
+                            }
+                            else
+                            {
+                                if (!haveReturn) throw new Exception("Method by name '" + context.method.Name + "' haven`t return");
+                            }
+                            context.EndMethod();
+                            haveReturn = false;
+                        }
                         else if (last == BlockType.GET)
                         {
+                            if (!haveReturn) throw new Exception("Getter of property by name '" + context.property.Name + "' haven`t return");
                             context.property.SetGetMethod(context.method);
                             context.EndMethod();
+                            haveReturn = false;
                         }
                         else if (last == BlockType.SET)
                         {
+                            if (haveReturn) throw new Exception("Setter of property by name '" + context.property.Name + "' have return");
                             context.property.SetSetMethod(context.method);
                             context.EndMethod();
                         }
-                        else if (last == BlockType.WHILE || last == BlockType.FOR || last == BlockType.FOREACH)
+                        else if (last == BlockType.WHILE)
+                        {
+                            //pass
+                        }
+                        else if (last == BlockType.FOR)
+                        {
+                            //pass
+                        }
+                        else if (last == BlockType.FOREACH)
                         {
                             //pass
                         }
                         else if (last == BlockType.EVENT) context.eventBuilder = null;
+                        else if (last == BlockType.CLASS) context.type.CreateType();
+                        else if (last == BlockType.ENUM) context.enumBuilder.CreateType();
 
                         blockType.RemoveAt(blockType.Count - 1); //end (remove) current block
                         break;
                     case Token.RUNFUNC:
                         try { for (int j = 2; j < e.args.Count; j++) context.LoadValue(e.args[i].GetValue()); }
                         catch { }
-                        context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue())); 
+                        //context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue())); 
                         break;
                     case Token.WHILE:
                         statement = name;
@@ -229,6 +261,7 @@ namespace TokensBuilder
                     case Token.RETURN:
                         context.LoadValue(name);
                         context.ILGenerator.Emit(OpCodes.Ret);
+                        haveReturn = true;
                         break;
                     case Token.IF:
                         blockType.Add(BlockType.IF);
@@ -354,6 +387,27 @@ namespace TokensBuilder
                             if (arg == "script") context.haveScript = true;
                             else if (arg == "entrypoint") context.haveScript = false;
                         }
+                        else if (name == "company")
+                        {
+                            context.assembly.SetCustomAttribute(
+                                new CustomAttributeBuilder(
+                                    typeof(AssemblyCompanyAttribute).GetConstructor(new Type[] { typeof(string) }
+                                    ), new object[] { name }));
+                        }
+                        else if (name == "version")
+                        {
+                            context.assembly.SetCustomAttribute(
+                                new CustomAttributeBuilder(
+                                    typeof(AssemblyVersionAttribute).GetConstructor(new Type[] { typeof(string) }
+                                    ), new object[] { name }));
+                        }
+                        else if (name == "copyright")
+                        {
+                            context.assembly.SetCustomAttribute(
+                                new CustomAttributeBuilder(
+                                    typeof(AssemblyCopyrightAttribute).GetConstructor(new Type[] { typeof(string) }
+                                    ), new object[] { name }));
+                        }
                         else
                         {
                             throw new NotSupportedException($"Directiva by name {name} not found (TokensError in line {i})");
@@ -435,6 +489,20 @@ namespace TokensBuilder
                         }
                         context.ILGenerator.Emit(OpCodes.Ceq);
                         break;
+                    case Token.CLT:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Clt);
+                        break;
+                    case Token.CGT:
+                        foreach (Identifer identifer in e.args)
+                        {
+                            context.LoadValue(identifer.GetValue());
+                        }
+                        context.ILGenerator.Emit(OpCodes.Cgt);
+                        break;
                 }
             }
 
@@ -476,9 +544,7 @@ namespace TokensBuilder
 
         public void EndWrite()
         {
-            try { type.CreateType(); enumBuilder.CreateType(); }
-            catch { }
-            mainType.CreateType();
+            if (haveScript) mainType.CreateType();
         }
 
         public void EndMethod()
@@ -504,7 +570,7 @@ namespace TokensBuilder
         {
             if (haveScript)
             {
-                script = mainType.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, CallingConventions.Any,typeof(void), new Type[] { typeof(string[]) });
+                script = mainType.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, CallingConventions.Any, typeof(void), new Type[] { typeof(string[]) });
                 method = script;
             }
             else
@@ -634,11 +700,6 @@ namespace TokensBuilder
                     throw new InvalidCastException(value + " is not value (TokensError)");
                 }
             }
-        }
-
-        public bool ParseStatement(string statement)
-        {
-            return false;
         }
     }
 }

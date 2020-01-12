@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 
 namespace TokensBuilder
 {
@@ -7,8 +8,8 @@ namespace TokensBuilder
     {
         public static string info
         {
-            get => "TokensBuilder by snaulX\n" +
-                $"Version - {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}\n" +
+            get => $"TokensBuilder by {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyCompanyAttribute>().Company}\n" +
+                $"Version - {Assembly.GetExecutingAssembly().GetName().Version}\n" +
                 "For get info write \"TokensBuilder -info\" in your command line";
         }
 
