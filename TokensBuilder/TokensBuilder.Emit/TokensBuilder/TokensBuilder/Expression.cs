@@ -28,5 +28,10 @@ namespace TokensBuilder
             left = "";
             right = "";
         }
+
+        public Statement(string statement)
+        {
+            string[] parts = statement.Split(' ');
+        }
     }
 }

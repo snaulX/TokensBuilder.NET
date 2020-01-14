@@ -112,16 +112,25 @@ namespace TokensBuilder
 
             //variables for building
             List<BlockType> blockType = new List<BlockType> { BlockType.DEFAULT };
-            string namespace_name = "", statement = "";
+            string namespace_name = "";
             Dictionary<string, Label> labels = new Dictionary<string, Label>();
-            bool tryBlock = false, haveReturn = false;
+            bool tryBlock = false, haveReturn = false, ifDirective = true;
+            Statement statement;
 
             //parse expressions
             for (int i = 0; i < expressions.Count; i++)
             {
                 Expression e = expressions[i];
                 string name = e.args[0].GetValue();
-                Console.WriteLine(e.token + string.Join(" ", e.args));
+                if (!ifDirective)
+                {
+                    if (e.token == Token.DIRECTIVA)
+                    {
+                        if (name == "endif")
+                            ifDirective = true;
+                    }
+                }
+                Console.WriteLine(e.token + " " + string.Join(" ", e.args) + "\t" + string.Join(" ", blockType));
                 switch (e.token)
                 {
                     case Token.NULL:
@@ -239,14 +248,12 @@ namespace TokensBuilder
                     case Token.RUNFUNC:
                         try { for (int j = 2; j < e.args.Count; j++) context.LoadValue(e.args[i].GetValue()); }
                         catch { }
-                        //context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue())); 
+                        context.ILGenerator.Emit(OpCodes.Call, Type.GetType(name).GetMethod(e.args[1].GetValue())); 
                         break;
                     case Token.WHILE:
-                        statement = name;
                         blockType.Add(BlockType.WHILE);
                         break;
                     case Token.FOR:
-                        statement = name;
                         blockType.Add(BlockType.FOR);
                         break;
                     case Token.FOREACH:
@@ -381,9 +388,9 @@ namespace TokensBuilder
                         blockType.Add(BlockType.DEFAULT);
                         break;
                     case Token.DIRECTIVA:
+                        string arg = e.args[1].GetValue();
                         if (name == "enable")
                         {
-                            string arg = e.args[1].GetValue();
                             if (arg == "script") context.haveScript = true;
                             else if (arg == "entrypoint") context.haveScript = false;
                         }
@@ -392,21 +399,58 @@ namespace TokensBuilder
                             context.assembly.SetCustomAttribute(
                                 new CustomAttributeBuilder(
                                     typeof(AssemblyCompanyAttribute).GetConstructor(new Type[] { typeof(string) }
-                                    ), new object[] { name }));
+                                    ), new object[] { arg }));
                         }
                         else if (name == "version")
                         {
                             context.assembly.SetCustomAttribute(
                                 new CustomAttributeBuilder(
                                     typeof(AssemblyVersionAttribute).GetConstructor(new Type[] { typeof(string) }
-                                    ), new object[] { name }));
+                                    ), new object[] { arg }));
+                        }
+                        else if (name == "file_version")
+                        {
+                            context.assembly.SetCustomAttribute(
+                                new CustomAttributeBuilder(
+                                    typeof(AssemblyFileVersionAttribute).GetConstructor(new Type[] { typeof(string) }
+                                    ), new object[] { arg }));
                         }
                         else if (name == "copyright")
                         {
                             context.assembly.SetCustomAttribute(
                                 new CustomAttributeBuilder(
                                     typeof(AssemblyCopyrightAttribute).GetConstructor(new Type[] { typeof(string) }
-                                    ), new object[] { name }));
+                                    ), new object[] { arg }));
+                        }
+                        else if (name == "title")
+                        {
+                            context.assembly.SetCustomAttribute(
+                                new CustomAttributeBuilder(
+                                    typeof(AssemblyTitleAttribute).GetConstructor(new Type[] { typeof(string) }
+                                    ), new object[] { arg }));
+                        }
+                        else if (name == "description")
+                        {
+                            context.assembly.SetCustomAttribute(
+                                new CustomAttributeBuilder(
+                                    typeof(AssemblyDescriptionAttribute).GetConstructor(new Type[] { typeof(string) }
+                                    ), new object[] { arg }));
+                        }
+                        else if (name == "product_name")
+                        {
+                            context.assembly.SetCustomAttribute(
+                                new CustomAttributeBuilder(
+                                    typeof(AssemblyProductAttribute).GetConstructor(new Type[] { typeof(string) }
+                                    ), new object[] { arg }));
+                        }
+                        else if (name == "if")
+                        {
+                            if (arg == "DOTNET")
+                                ifDirective = true;
+                            else if (arg == "JVM" || arg == "LLVM")
+                                ifDirective = false;
+                            else
+                                throw new KeyNotFoundException($"Statement by name {arg} not found in TokensBuilder (TokensError in line {i})");
                         }
                         else
                         {
@@ -570,7 +614,9 @@ namespace TokensBuilder
         {
             if (haveScript)
             {
-                script = mainType.DefineMethod("Main", MethodAttributes.Private | MethodAttributes.Static, CallingConventions.Any, typeof(void), new Type[] { typeof(string[]) });
+                script = mainType.DefineMethod("Main",
+                    MethodAttributes.Private | MethodAttributes.Static,
+                    CallingConventions.Any, typeof(void), new Type[] { typeof(string[]) });
                 method = script;
             }
             else
