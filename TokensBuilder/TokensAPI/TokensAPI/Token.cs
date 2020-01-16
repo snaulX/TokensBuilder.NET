@@ -247,16 +247,20 @@
         /// </summary>
         OR,
         /// <summary>
-        /// Operator and '|'
+        /// Operator bitwise or '|'
         /// </summary>
         XOR,
         /// <summary>
-        /// Operator and '!'
+        /// Operator not '!'
         /// </summary>
         NOT,
         /// <summary>
-        /// Operator sizeof
+        /// Operator 'sizeof'
         /// </summary>
-        SIZEOF
+        SIZEOF,
+        /// <summary>
+        /// Operator 'with' (how in Pascal)
+        /// </summary>
+        WITH
     }
 }

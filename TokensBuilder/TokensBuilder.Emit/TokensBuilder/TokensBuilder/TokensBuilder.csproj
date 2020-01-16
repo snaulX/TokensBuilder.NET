@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="Expression.cs" />
     <Compile Include="Generator.cs" />
+    <Compile Include="Parser.cs" />
     <Compile Include="TokensBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

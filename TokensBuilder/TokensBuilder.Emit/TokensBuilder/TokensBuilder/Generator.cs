@@ -32,7 +32,8 @@ namespace TokensBuilder
         FINALLY,
         ENTRYPOINT,
         ASYNC,
-        EVENT
+        EVENT,
+        WITH
     }
 
     public class Generator
@@ -140,21 +141,11 @@ namespace TokensBuilder
                         context.ILGenerator.UsingNamespace(name);
                         break;
                     case Token.INCLUDE:
-                        Assembly includedAssembly = Assembly.LoadFrom(name);
-                        /*foreach (Type type in includedAssembly.GetExportedTypes())
-                        {
-                            //pass
-                        }*/
+                        context.references.Add(Assembly.LoadFrom(name));
                         break;
                     case Token.WRITEVAR:
-                        try
-                        {
-                            Type.GetType(name).GetField(e.args[1].GetValue()).SetValue(null, ContextInfo.GetValue(e.args[2].GetValue()));
-                        }
-                        catch
-                        {
-                            //pass
-                        }
+                        context.LoadValue(name);
+                        context.ILGenerator.Emit(OpCodes.Stfld);
                         break;
                     case Token.CLASS:
                         if (namespace_name != string.Empty)
@@ -239,6 +230,7 @@ namespace TokensBuilder
                         {
                             //pass
                         }
+                        else if (last == BlockType.WITH) context.withVariable = null;
                         else if (last == BlockType.EVENT) context.eventBuilder = null;
                         else if (last == BlockType.CLASS) context.type.CreateType();
                         else if (last == BlockType.ENUM) context.enumBuilder.CreateType();
@@ -260,15 +252,22 @@ namespace TokensBuilder
                         blockType.Add(BlockType.FOREACH);
                         break;
                     case Token.BREAK:
-                        context.ILGenerator.Emit(OpCodes.Br);
+                        context.ILGenerator.Emit(OpCodes.Br_S);
                         break;
                     case Token.CONTINUE:
                         context.ILGenerator.Emit(OpCodes.Br_S);
                         break;
                     case Token.RETURN:
-                        context.LoadValue(name);
-                        context.ILGenerator.Emit(OpCodes.Ret);
-                        haveReturn = true;
+                        if (blockType.Contains(BlockType.METHOD))
+                        {
+                            context.LoadValue(name);
+                            context.ILGenerator.Emit(OpCodes.Ret);
+                            haveReturn = true;
+                        }
+                        else
+                        {
+                            throw new Exception("Operator 'return' called not in function");
+                        }
                         break;
                     case Token.IF:
                         blockType.Add(BlockType.IF);
@@ -280,7 +279,7 @@ namespace TokensBuilder
                         blockType.Add(BlockType.ELIF);
                         break;
                     case Token.GOTO:
-                        context.ILGenerator.Emit(OpCodes.Jmp, labels[name]);
+                        context.ILGenerator.Emit(OpCodes.Br, labels[name]);
                         break;
                     case Token.LABEL:
                         Label label = context.ILGenerator.DefineLabel();
@@ -463,6 +462,14 @@ namespace TokensBuilder
                     case Token.BREAKPOINT:
                         context.ILGenerator.Emit(OpCodes.Break);
                         break;
+                    case Token.WITH:
+                        blockType.Add(BlockType.WITH);
+                        context.withVariable = context.type.GetField(name, BindingFlags.GetField | BindingFlags.GetProperty);
+                        break;
+                    case Token.SIZEOF:
+                        context.LoadValue(name);
+                        context.ILGenerator.Emit(OpCodes.Sizeof);
+                        break;
                     case Token.ADD:
                         foreach (Identifer identifer in e.args)
                         {
@@ -575,6 +582,8 @@ namespace TokensBuilder
         public ConstructorBuilder constructor;
         public EventBuilder eventBuilder;
         public ILGenerator ILGenerator => method.GetILGenerator();
+        public FieldInfo withVariable;
+        public List<Assembly> references; 
 
         public ContextInfo()
         {
@@ -681,14 +690,15 @@ namespace TokensBuilder
             else if (value.StartsWith("new "))
             {
                 value = value.Remove(0, 4);
+                ILGenerator.Emit(OpCodes.Newobj);
             }
             else
             {
-                throw new InvalidCastException(value + " is not value (TokensError)");
+                //ILGenerator.Emit(OpCodes.Newobj, Parser.ParseLine(value, this));
             }
         }
 
-        public static object GetValue(string value)
+        public object GetValue(string value)
         {
             if (value[0] == '\"' && value[value.Length - 1] == '\"')
             {
@@ -736,16 +746,36 @@ namespace TokensBuilder
             }
             else
             {
-                string[] members = value.Split('.');
-                if (members.Length > 1)
+                return Parser.ParseLine(value, this);
+            }
+        }
+
+        public Type FindStaticClass(string name)
+        {
+            if (haveScript)
+                if (mainType.Name == name)
+                    return mainType;
+            Type returnType = assembly.GetType(name);
+            if (returnType == null)
+            {
+                for (int i = 0; i < references.Count; i++)
                 {
-                    throw new Exception("It`s only on time");
-                }
-                else
-                {
-                    throw new InvalidCastException(value + " is not value (TokensError)");
+                    returnType = references[i].GetType(name);
+                    if (returnType == null)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        return returnType;
+                    }
                 }
             }
+            else
+            {
+                return returnType;
+            }
+            throw new TypeLoadException($"Static class by name '{name}' not found (TokensError)");
         }
     }
 }
