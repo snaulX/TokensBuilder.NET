@@ -7,9 +7,16 @@ using System.Threading.Tasks;
 
 namespace TokensBuilder
 {
-    public static class Parser
+    public class Parser
     {
-        public static object ParseLine(string line, ContextInfo context)
+        public ContextInfo context;
+
+        public Parser(ContextInfo _context)
+        {
+            context = _context;
+        }
+
+        public object ParseLine(string line)
         {
             object obj = "";
             line = line.Trim();

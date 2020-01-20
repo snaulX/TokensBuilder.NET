@@ -49,13 +49,6 @@ namespace TokensBuilder
 
         public void GenerateIL(string assembly_name, string code, bool haveScript = true)
         {
-            //create context
-            context.appName = assembly_name;
-            context.CreateName();
-            context.CreateAssembly();
-            context.haveScript = haveScript;
-            if (haveScript) context.InitilizateScript();
-
             //parse code to expressions
             string[] lines = code.Split('\n', '\r');
             try
@@ -69,47 +62,70 @@ namespace TokensBuilder
                     {
                         for (j = 0; !char.IsWhiteSpace(line[j]); j++)
                         {
-                            try { buffer.Append(line[j]); }
+                            try {
+                                Console.WriteLine("LINE " + line + ' ' + j.ToString());
+                                buffer.Append(line[j]); 
+                            }
                             catch { break; }
                         }
-                        while (char.IsWhiteSpace(line[j]))
-                        {
-                            j++;
-                        } //skip whitespaces
-                        Token token = (Token)Enum.Parse(typeof(Token), buffer.ToString().TrimEnd());
+                        Console.WriteLine("LINE " + line);
+                        Token token = (Token)Enum.Parse(typeof(Token), buffer.ToString());
+                        Console.WriteLine("TOKEN " + buffer.ToString());
                         buffer.Clear();
-                        List<Identifer> args = new List<Identifer>();
-                        byte priority = 0;
-                        for (j = j; j < line.Length; j++)
+                        if (j == line.Length)
                         {
-                            char cur = line[j];
-                            if (cur == '(')
+                            while (char.IsWhiteSpace(line[j]))
                             {
-                                buffer.Append(cur);
-                                priority++;
-                            }
-                            else if (cur == ')' && priority > 0)
+                                j++;
+                            } //skip whitespaces
+                            List<Identifer> args = new List<Identifer>();
+                            byte priority = 0;
+                            for (j = j; j < line.Length; j++)
                             {
-                                buffer.Append(cur);
-                                priority--;
+                                char cur = line[j];
+                                if (cur == '(')
+                                {
+                                    buffer.Append(cur);
+                                    priority++;
+                                }
+                                else if (cur == ')' && priority > 0)
+                                {
+                                    buffer.Append(cur);
+                                    priority--;
+                                }
+                                else if (char.IsWhiteSpace(cur) && priority == 0)
+                                {
+                                    args.Add(Identifer.GetIdentifer(buffer.ToString()));
+                                    buffer.Clear();
+                                }
+                                else
+                                {
+                                    buffer.Append(cur);
+                                }
                             }
-                            else if (char.IsWhiteSpace(cur) && priority == 0)
-                            {
-                                args.Add(Identifer.GetIdentifer(buffer.ToString()));
-                                buffer.Clear();
-                            }
-                            else
-                            {
-                                buffer.Append(cur);
-                            }
+                            args.Add(Identifer.GetIdentifer(buffer.ToString()));
+                            expressions.Add(new Expression { token = token, args = args });
                         }
-                        args.Add(Identifer.GetIdentifer(buffer.ToString()));
-                        expressions.Add(new Expression { token = token, args = args });
+                        else
+                        {
+                            expressions.Add(new Expression { token = token });
+                        }
                     }
                     catch { } //just skip
                 }
             }
             catch { }
+            Build(assembly_name, haveScript);
+        }
+
+        public void Build(string assembly_name, bool haveScript)
+        {
+            //create context
+            context.appName = assembly_name;
+            context.CreateName();
+            context.CreateAssembly();
+            context.haveScript = haveScript;
+            if (haveScript) context.InitilizateScript();
 
             //variables for building
             List<BlockType> blockType = new List<BlockType> { BlockType.DEFAULT };
@@ -188,7 +204,7 @@ namespace TokensBuilder
                         blockType.Add(BlockType.METHOD);
                         break;
                     case Token.END:
-                        BlockType last = blockType[blockType.Count - 1]; //get current block
+                        BlockType last = blockType.Last(); //get current block
                         if (last == BlockType.DEFAULT) context.ILGenerator.Emit(OpCodes.Br);
                         else if (last == BlockType.TRY) tryBlock = true;
                         else if (last == BlockType.CATCH) context.ILGenerator.EndExceptionBlock();
@@ -258,7 +274,7 @@ namespace TokensBuilder
                         context.ILGenerator.Emit(OpCodes.Br_S);
                         break;
                     case Token.RETURN:
-                        if (blockType.Contains(BlockType.METHOD))
+                        if (blockType.Contains(BlockType.METHOD) || blockType.Contains(BlockType.GET))
                         {
                             context.LoadValue(name);
                             context.ILGenerator.Emit(OpCodes.Ret);
@@ -287,13 +303,13 @@ namespace TokensBuilder
                         labels.Add(name, label);
                         break;
                     case Token.YIELD:
-                        if (context.method.ReturnType is IEnumerable<object>)
+                        if ((blockType.Contains(BlockType.METHOD) || blockType.Contains(BlockType.GET)) && context.method.ReturnType is IEnumerable<object>)
                         {
                             //pass
                         }
                         else
                         {
-                            throw new InvalidOperationException("Yield can be used in method only with return type IEnumerable");
+                            throw new InvalidOperationException("Yield can be used in method or getter only with return type IEnumerable");
                         }
                         break;
                     case Token.STRUCT:
@@ -464,7 +480,7 @@ namespace TokensBuilder
                         break;
                     case Token.WITH:
                         blockType.Add(BlockType.WITH);
-                        context.withVariable = context.type.GetField(name, BindingFlags.GetField | BindingFlags.GetProperty);
+                        context.withVariable = context.type.GetField(name);
                         break;
                     case Token.SIZEOF:
                         context.LoadValue(name);
@@ -558,8 +574,15 @@ namespace TokensBuilder
             }
 
             //close context
-            if (context.haveScript) context.EndScript();
-            context.EndWrite();
+            if (blockType.Count == 1)
+            {
+                if (context.haveScript) context.EndScript();
+                context.EndWrite();
+            }
+            else
+            {
+                throw new Exception("Block(s) not closed. TokensError in the end of compilation");
+            }
         }
 
         public void CreatePE(string full_name) => context.assembly.Save(full_name);
@@ -567,6 +590,7 @@ namespace TokensBuilder
 
     public class ContextInfo
     {
+        public Parser parser;
         public bool haveScript;
         public string appName;
         public PEFileKinds outputType;
@@ -593,6 +617,7 @@ namespace TokensBuilder
             method = null;
             script = null;
             haveScript = true;
+            parser = new Parser(this);
         }
 
         public void EndWrite()
@@ -746,7 +771,7 @@ namespace TokensBuilder
             }
             else
             {
-                return Parser.ParseLine(value, this);
+                return parser.ParseLine(value);
             }
         }
 
