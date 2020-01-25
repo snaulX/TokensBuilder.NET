@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace TokensBuilder
 {
-    enum BlockType
+    public enum BlockType
     {
         DEFAULT,
         IF,
@@ -30,7 +30,6 @@ namespace TokensBuilder
         TRY,
         CATCH,
         FINALLY,
-        ENTRYPOINT,
         ASYNC,
         EVENT,
         WITH
@@ -38,6 +37,13 @@ namespace TokensBuilder
 
     public class Generator
     {
+        enum HaveFlag : byte
+        {
+            No,
+            Have,
+            Was
+        }
+
         public ContextInfo context;
         public List<Expression> expressions;
 
@@ -62,10 +68,7 @@ namespace TokensBuilder
                     {
                         for (j = 0; !char.IsWhiteSpace(line[j]); j++)
                         {
-                            try {
-                                Console.WriteLine("LINE " + line + ' ' + j.ToString());
-                                buffer.Append(line[j]); 
-                            }
+                            try { buffer.Append(line[j]); }
                             catch { break; }
                         }
                         Console.WriteLine("LINE " + line);
@@ -131,22 +134,29 @@ namespace TokensBuilder
             List<BlockType> blockType = new List<BlockType> { BlockType.DEFAULT };
             string namespace_name = "";
             Dictionary<string, Label> labels = new Dictionary<string, Label>();
-            bool tryBlock = false, haveReturn = false, ifDirective = true;
+            bool tryBlock = false, ifDirective = true;
+            HaveFlag haveReturn = HaveFlag.No, haveEntrypoint = HaveFlag.No;
             Statement statement;
+            List<string> namespaces = new List<string>();
 
             //parse expressions
             for (int i = 0; i < expressions.Count; i++)
             {
                 Expression e = expressions[i];
-                string name = e.args[0].GetValue();
-                if (!ifDirective)
+                string name = "";
+                try
                 {
-                    if (e.token == Token.DIRECTIVA)
+                    name = e.args[0].GetValue();
+                    if (!ifDirective)
                     {
-                        if (name == "endif")
-                            ifDirective = true;
+                        if (e.token == Token.DIRECTIVA)
+                        {
+                            if (name == "endif")
+                                ifDirective = true;
+                        }
                     }
                 }
+                catch { }
                 Console.WriteLine(e.token + " " + string.Join(" ", e.args) + "\t" + string.Join(" ", blockType));
                 switch (e.token)
                 {
@@ -154,7 +164,7 @@ namespace TokensBuilder
                         context.ILGenerator.Emit(OpCodes.Nop);
                         break;
                     case Token.USE:
-                        context.ILGenerator.UsingNamespace(name);
+                        namespaces.Add(name);
                         break;
                     case Token.INCLUDE:
                         context.references.Add(Assembly.LoadFrom(name));
@@ -201,36 +211,43 @@ namespace TokensBuilder
                             MethodBuilder method = context.type.DefineMethod(name, MethodAttributes.HideBySig);
                             context.method = method;
                         }
+                        for (int j = 0; j < namespaces.Count; j++)
+                            context.ILGenerator.UsingNamespace(namespaces[j]);
                         blockType.Add(BlockType.METHOD);
                         break;
                     case Token.END:
                         BlockType last = blockType.Last(); //get current block
-                        if (last == BlockType.DEFAULT) context.ILGenerator.Emit(OpCodes.Br);
+                        Console.WriteLine("END IS " + last);
+                        if (last == BlockType.DEFAULT)
+                        {
+                            //nothing
+                        }
                         else if (last == BlockType.TRY) tryBlock = true;
                         else if (last == BlockType.CATCH) context.ILGenerator.EndExceptionBlock();
                         else if (last == BlockType.METHOD)
                         {
-                            if (context.method.ReturnType == typeof(void))
+                            if (context.method.ReturnType == typeof(void) || context.method.ReturnType == null)
                             {
-                                if (!haveReturn) context.ILGenerator.Emit(OpCodes.Ret);
+                                if (haveReturn == HaveFlag.No) context.ILGenerator.Emit(OpCodes.Ret);
                             }
                             else
                             {
-                                if (!haveReturn) throw new Exception("Method by name '" + context.method.Name + "' haven`t return");
+                                if (haveReturn == HaveFlag.No) throw new Exception("Method by name '" + context.method.Name + "' haven`t return");
                             }
                             context.EndMethod();
-                            haveReturn = false;
+                            haveReturn = HaveFlag.No;
+                            if (haveEntrypoint == HaveFlag.Have) haveEntrypoint = HaveFlag.Was;
                         }
                         else if (last == BlockType.GET)
                         {
-                            if (!haveReturn) throw new Exception("Getter of property by name '" + context.property.Name + "' haven`t return");
+                            if (haveReturn == HaveFlag.No) throw new Exception("Getter of property by name '" + context.property.Name + "' haven`t return");
                             context.property.SetGetMethod(context.method);
                             context.EndMethod();
-                            haveReturn = false;
+                            haveReturn = HaveFlag.No;
                         }
                         else if (last == BlockType.SET)
                         {
-                            if (haveReturn) throw new Exception("Setter of property by name '" + context.property.Name + "' have return");
+                            if (haveReturn == HaveFlag.Was) throw new Exception("Setter of property by name '" + context.property.Name + "' have return");
                             context.property.SetSetMethod(context.method);
                             context.EndMethod();
                         }
@@ -248,7 +265,18 @@ namespace TokensBuilder
                         }
                         else if (last == BlockType.WITH) context.withVariable = null;
                         else if (last == BlockType.EVENT) context.eventBuilder = null;
-                        else if (last == BlockType.CLASS) context.type.CreateType();
+                        else if (last == BlockType.CLASS)
+                        {
+                            Type t = context.type.CreateType();
+                            try
+                            {
+                                Console.WriteLine("END OF TYPE " + t.Name);
+                            }
+                            catch
+                            {
+                                Console.WriteLine("JFSODFOIDHFOHSUDFHIUSDHUFHSDFHIDSHIFHG");
+                            }
+                        }
                         else if (last == BlockType.ENUM) context.enumBuilder.CreateType();
 
                         blockType.RemoveAt(blockType.Count - 1); //end (remove) current block
@@ -278,7 +306,7 @@ namespace TokensBuilder
                         {
                             context.LoadValue(name);
                             context.ILGenerator.Emit(OpCodes.Ret);
-                            haveReturn = true;
+                            haveReturn = HaveFlag.Was;
                         }
                         else
                         {
@@ -339,7 +367,15 @@ namespace TokensBuilder
                     case Token.ATTRIBUTE:
                         if (name == "Entrypoint")
                         {
-                            blockType.Add(BlockType.ENTRYPOINT);
+                            if (!haveScript)
+                            {
+                                if (haveEntrypoint == HaveFlag.No) haveEntrypoint = HaveFlag.Have;
+                                else throw new Exception("Entrypoint also have in this program");
+                            }
+                            else
+                            {
+                                throw new Exception("Entrypoint not be called in script program");
+                            }
                         }
                         break;
                     case Token.OPCODEADD:
@@ -583,6 +619,11 @@ namespace TokensBuilder
             {
                 throw new Exception("Block(s) not closed. TokensError in the end of compilation");
             }
+            try 
+            {
+                foreach (Type type in context.module.GetTypes()) Console.WriteLine(type.FullName); 
+            }
+            catch { }
         }
 
         public void CreatePE(string full_name) => context.assembly.Save(full_name);
@@ -622,7 +663,7 @@ namespace TokensBuilder
 
         public void EndWrite()
         {
-            if (haveScript) mainType.CreateType();
+            if (haveScript) mainType.CreateType();        
         }
 
         public void EndMethod()

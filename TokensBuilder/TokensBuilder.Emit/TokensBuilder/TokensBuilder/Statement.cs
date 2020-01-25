@@ -1,22 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Reflection.Emit;
-using TokensAPI;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace TokensBuilder
 {
-    public class Expression
-    {
-        public Token token;
-        public List<Identifer> args;
-
-        public Expression()
-        {
-            token = Token.NULL;
-            args = new List<Identifer>();
-        }
-    }
-
     public class Statement
     {
         string left, right;
