@@ -4,10 +4,18 @@ using System.Reflection.Emit;
 
 namespace TokensBuilder
 {
-    public static class Config
+    public class Config
     {
-        public static PEFileKinds outputType;
-        public static string appName, platform;
-        public static byte header;
+        public PEFileKinds outputType;
+        public string appName, platform;
+        public byte header;
+
+        public Config()
+        {
+            header = 0;
+            appName = "";
+            platform = "";
+            outputType = PEFileKinds.ConsoleApplication;
+        }
     }
 }

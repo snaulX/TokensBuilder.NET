@@ -20,16 +20,16 @@ namespace TokensBuilder
             }
             else
             {
-                int index = Array.IndexOf(args, "-target");
-                if (index > 1) Config.outputType = (PEFileKinds) Enum.Parse(typeof(PEFileKinds), args[index + 1]);
-                gen = new Generator(args[0]);
-                gen.Generate();
+                foreach (string fileName in args[0].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    gen = new Generator(fileName);
+                    //int index = Array.IndexOf(args, "-target");
+                    //if (index > 1) gen.config.outputType = (PEFileKinds)Enum.Parse(typeof(PEFileKinds), args[index + 1]);
+                    gen.Generate();
+                }
             }
         }
 
-        public static bool IsEmpty<T>(this IEnumerable<T> collection)
-        {
-            return collection.Count() == 0;
-        }
+        public static bool IsEmpty<T>(this IEnumerable<T> collection) => collection.Count() == 0;
     }
 }
