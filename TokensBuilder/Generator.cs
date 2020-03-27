@@ -9,8 +9,11 @@ namespace TokensBuilder
 {
     public class Generator
     {
+        public uint line = 0;
         TokensReader reader;
         public Config config;
+        //flags
+        private bool isDirective = false;
 
         public Generator()
         {
@@ -29,10 +32,7 @@ namespace TokensBuilder
             reader.GetHeaderAndTarget(out config.header, out config.platform);
             reader.ReadTokens();
             reader.EndWork();
-            foreach (TokenType token in reader.tokens)
-            {
-                ParseToken(token);
-            }
+            foreach (TokenType token in reader.tokens) ParseToken(token);
         }
 
         public void ParseToken(TokenType token)
@@ -40,6 +40,7 @@ namespace TokensBuilder
             switch (token)
             {
                 case TokenType.NEWLN:
+                    line++;
                     break;
                 case TokenType.CLASS:
                     break;
@@ -104,6 +105,8 @@ namespace TokensBuilder
                 case TokenType.NAMESPACE:
                     break;
                 case TokenType.IMPORT_LIBRARY:
+                    ParseTokensLibrary(reader.string_values[0], ref reader);
+                    reader.string_values.RemoveAt(0);
                     break;
                 case TokenType.USING_NAMESPACE:
                     break;
@@ -126,6 +129,16 @@ namespace TokensBuilder
                 case TokenType.LAMBDA:
                     break;
             }
+        }
+
+        public void ParseTokensLibrary(string path, ref TokensReader treader)
+        {
+            TokensReader tokensReader = new TokensReader(path);
+            tokensReader.GetHeaderAndTarget(out byte header, out _);
+            if (header != 5) throw new InvalidHeaderException(header);
+            reader.ReadTokens();
+            reader.EndWork();
+            treader.Add(tokensReader);
         }
     }
 }
