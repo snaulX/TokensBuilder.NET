@@ -1,23 +1,9 @@
 # TokensBuilder.NET
  TokensBuilder - is a builder of tokens for .NET Framework  
- Wiki - https://github.com/world-of-legends/tokensbuilder-dotnet/wiki
+ Wiki - https://github.com/snaulX/TokensBuilder.NET/wiki
  ## What is it?
 **TokensBuilder.NET** - is a program (in common just .NET library) for build tokens set to .NET Framework program/library/Windows GUI Application.
-For example file with the tokens can look like:
-```
-USE System
-LIB SampleTokensLib
-RUNFUNC Console.WriteLine "Hello World"
-DIRECTIVA include YourDll.dll
-DIRECTIVA version 1.0.0
-DIRECTIVA outtype Exe
-NEWCLASS ListExample<T> Public 
-IMPLEMENTS IEnumerable<T>
-ENDCLASS
-COMMENT "It`s just crazy example"
-MULTICOMMENT "It`s will be ignored by TokensBuilder"
-```
+File with tokens is a binary file. About tokens written on https://github.com/snaulX/TokensAPI/wiki/What-is-Tokens.
 ### Project using:
-* [Mono.Cecil](https://github.com/jbevain/cecil)
-* [TokensAPI](https://github.com/world-of-legends/tokensbuilder-dotnet/tree/master/TokensAPI)
-* .NET Framework 4.6
+* [TokensAPI](https://github.com/snaulX/TokensAPI/tree/master/CSharp/TokensAPI)
+* .NET Framework 4.5
