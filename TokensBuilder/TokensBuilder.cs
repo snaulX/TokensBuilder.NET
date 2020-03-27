@@ -52,5 +52,12 @@ namespace TokensBuilder
         }
 
         public static bool IsEmpty<T>(this IEnumerable<T> collection) => collection.Count() == 0;
+
+        public static T Peek<T>(this List<T> collection)
+        {
+            T elem = collection[0];
+            collection.RemoveAt(0);
+            return elem;
+        }
     }
 }
