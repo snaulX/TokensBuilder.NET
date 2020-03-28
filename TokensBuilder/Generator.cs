@@ -17,9 +17,10 @@ namespace TokensBuilder
         public bool initClass = false;
         public Config config;
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
+        byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         List<TokensError> errors = new List<TokensError>();
         //flags
-        private bool isDirective = false, needEnd = false;
+        private bool isDirective = false, needEnd = false, extends = false;
         private bool? isActual = null; //need three values
 
         public Generator()
@@ -53,6 +54,13 @@ namespace TokensBuilder
             while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
         }
 
+        private void CheckOnAllClosed()
+        {
+            if (needEndBlock > 0) errors.Add(new NeedEndError(line, "Need end of block"));
+            else if (needEndSequence > 0) errors.Add(new NeedEndError(line, "Need end of array"));
+            else if (needEndStatement > 0) errors.Add(new NeedEndError(line, "Need end of statement"));
+        }
+
         public void ParseToken(TokenType token)
         {
             if (needEnd && token == TokenType.EXPRESSION_END) 
@@ -80,10 +88,16 @@ namespace TokensBuilder
                     case TokenType.VAR:
                         break;
                     case TokenType.BLOCK:
+                        if (reader.bool_values.Peek()) needEndBlock++;
+                        else needEndBlock--;
                         break;
                     case TokenType.STATEMENT:
+                        if (reader.bool_values.Peek()) needEndStatement++;
+                        else needEndStatement--;
                         break;
                     case TokenType.SEQUENCE:
+                        if (reader.bool_values.Peek()) needEndSequence++;
+                        else needEndSequence--;
                         break;
                     case TokenType.LITERAL:
                         if (isDirective)
@@ -155,8 +169,11 @@ namespace TokensBuilder
                         needEnd = true;
                         break;
                     case TokenType.IMPLEMENTS:
+                        CheckOnAllClosed();
                         break;
                     case TokenType.EXTENDS:
+                        CheckOnAllClosed();
+                        extends = true;
                         break;
                     case TokenType.INSTANCEOF:
                         break;

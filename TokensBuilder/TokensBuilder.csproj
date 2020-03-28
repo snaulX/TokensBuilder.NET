@@ -49,6 +49,7 @@
     <Compile Include="Config.cs" />
     <Compile Include="Context.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
+    <Compile Include="Errors\NeedEndError.cs" />
     <Compile Include="Errors\TypeNotFoundError.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="TokensBuilder.cs" />
