@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
+using TokensBuilder.Errors;
 
 namespace TokensBuilder
 {
     public class Generator
     {
         public uint line = 0;
-        TokensReader reader;
+        public TokensReader reader;
         public string currentNamespace = "";
         public List<string> usingNamespaces = new List<string>();
         public bool initClass = false;
         public Config config;
+        public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         List<TokensError> errors = new List<TokensError>();
         //flags
         private bool isDirective = false, needEnd = false;
@@ -23,6 +24,17 @@ namespace TokensBuilder
 
         public Generator()
         {
+            directives.Add("extends", () => {
+                TokenType curToken = reader.tokens.Peek();
+                if (curToken == TokenType.LITERAL)
+                {
+                    string baseClassName = reader.string_values.Peek();
+                }
+                else
+                {
+                    errors.Add(new InvalidTokenError(line, curToken));
+                }
+            });
             reader = new TokensReader();
             config = new Config();
         }
@@ -38,7 +50,7 @@ namespace TokensBuilder
             reader.GetHeaderAndTarget(out config.header, out config.platform);
             reader.ReadTokens();
             reader.EndWork();
-            foreach (TokenType token in reader.tokens) ParseToken(token);
+            while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
         }
 
         public void ParseToken(TokenType token)
@@ -74,6 +86,10 @@ namespace TokensBuilder
                     case TokenType.SEQUENCE:
                         break;
                     case TokenType.LITERAL:
+                        if (isDirective)
+                        {
+                            directives[reader.string_values.Peek()].Invoke();
+                        }
                         break;
                     case TokenType.SEPARATOR:
                         break;

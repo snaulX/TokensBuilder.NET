@@ -22,5 +22,15 @@ namespace TokensBuilder
         public static EnumBuilder enumBuilder = null;
         public static PropertyBuilder propertyBuilder = null;
         public static ParameterBuilder parameterBuilder = null;
+
+        public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
+        {
+            Type type = null;
+            foreach (string nameSpace in namespaces)
+            {
+                type = Assembly.GetExecutingAssembly().GetType(nameSpace + name);
+            }
+            return type;
+        }
     }
 }

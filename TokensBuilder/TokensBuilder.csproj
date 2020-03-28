@@ -48,6 +48,8 @@
   <ItemGroup>
     <Compile Include="Config.cs" />
     <Compile Include="Context.cs" />
+    <Compile Include="Errors\InvalidTokenError.cs" />
+    <Compile Include="Errors\TypeNotFoundError.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="TokensBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -56,8 +58,6 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Errors\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
