@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection.Emit;
 using System.Reflection;
+using TokensAPI;
 
 namespace TokensBuilder
 {
@@ -22,6 +23,7 @@ namespace TokensBuilder
         public static EnumBuilder enumBuilder = null;
         public static PropertyBuilder propertyBuilder = null;
         public static ParameterBuilder parameterBuilder = null;
+        public static ClassType classType = ClassType.DEFAULT;
 
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
@@ -29,8 +31,21 @@ namespace TokensBuilder
             foreach (string nameSpace in namespaces)
             {
                 type = Assembly.GetExecutingAssembly().GetType(nameSpace + name);
+                if (type != null) return type;
             }
-            return type;
+            return null;
+        }
+
+        public static Type GetInterfaceByName(string name, IEnumerable<string> namespaces)
+        {
+            Type iface = null;
+            foreach (string nameSpace in namespaces)
+            {
+                iface = Assembly.GetExecutingAssembly().GetType(nameSpace + name);
+                if (!iface.IsInterface) iface = null;
+                if (iface != null) return iface;
+            }
+            return null;
         }
     }
 }

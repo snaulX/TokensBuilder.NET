@@ -20,7 +20,7 @@ namespace TokensBuilder
         byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         List<TokensError> errors = new List<TokensError>();
         //flags
-        private bool isDirective = false, needEnd = false, extends = false;
+        private bool isDirective = false, needEnd = false, extends = false, implements = false;
         private bool? isActual = null; //need three values
 
         public Generator()
@@ -52,6 +52,9 @@ namespace TokensBuilder
             reader.ReadTokens();
             reader.EndWork();
             while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
+            if (needEndBlock > 0) errors.Add(new NeedEndError(line, "Need " + needEndBlock + " end of blocks"));
+            if (needEndSequence > 0) errors.Add(new NeedEndError(line, "Need " + needEndSequence + " end of sequences"));
+            if (needEndStatement > 0) errors.Add(new NeedEndError(line, "Need " + needEndStatement + " end of statements"));
         }
 
         private void CheckOnAllClosed()
@@ -61,12 +64,28 @@ namespace TokensBuilder
             else if (needEndStatement > 0) errors.Add(new NeedEndError(line, "Need end of statement"));
         }
 
+        private bool IsEnd(TokenType token)
+        {
+            return token == TokenType.EXPRESSION_END || (token == TokenType.BLOCK && reader.bool_values[0]);
+        }
+
         public void ParseToken(TokenType token)
         {
-            if (needEnd && token == TokenType.EXPRESSION_END) 
+            if (needEnd)
+            {
+                if (!IsEnd(token)) errors.Add(new TokensError(line, "End of expression with breakpoint not found"));
+                else if (token == TokenType.BLOCK) needEndBlock++;
                 needEnd = false;
-            else if (needEnd && token != TokenType.EXPRESSION_END) 
-                errors.Add(new TokensError(line, "End of expression with breakpoint not found"));
+            }
+            else if (extends)
+            {
+                if (token == TokenType.LITERAL)
+                    Context.typeBuilder.SetParent(Context.GetTypeByName(reader.string_values.Peek(), usingNamespaces));
+                else
+                    errors.Add(new InvalidTokenError(line, TokenType.LITERAL));
+                extends = false;
+                needEnd = true;
+            }
             else
             {
                 switch (token)
@@ -76,11 +95,14 @@ namespace TokensBuilder
                         line++;
                         break;
                     case TokenType.CLASS:
+                        Console.WriteLine(string.Join(", ", usingNamespaces));
                         TypeAttributes typeAttributes = TypeAttributes.Class;
                         SecurityDegree securityDegree = reader.securities.Peek();
+                        Context.classType = reader.class_types.Peek();
                         if (securityDegree == SecurityDegree.PRIVATE) typeAttributes |= TypeAttributes.NotPublic;
                         else if (securityDegree == SecurityDegree.PUBLIC) typeAttributes |= TypeAttributes.Public;
-                        Context.typeBuilder = Context.moduleBuilder.DefineType(reader.string_values.Peek(), typeAttributes);
+                        Context.typeBuilder = Context.moduleBuilder.DefineType(
+                            currentNamespace + reader.string_values.Peek(), typeAttributes);
                         initClass = true;
                         break;
                     case TokenType.FUNCTION:
@@ -88,7 +110,12 @@ namespace TokensBuilder
                     case TokenType.VAR:
                         break;
                     case TokenType.BLOCK:
-                        if (reader.bool_values.Peek()) needEndBlock++;
+                        if (reader.bool_values.Peek())
+                        {
+                            implements = false;
+                            extends = false;
+                            needEndBlock++;
+                        }
                         else needEndBlock--;
                         break;
                     case TokenType.STATEMENT:
@@ -100,9 +127,14 @@ namespace TokensBuilder
                         else needEndSequence--;
                         break;
                     case TokenType.LITERAL:
+                        string literal = reader.string_values.Peek();
                         if (isDirective)
                         {
-                            directives[reader.string_values.Peek()].Invoke();
+                            directives[literal].Invoke();
+                        }
+                        else if (implements)
+                        {
+                            Context.typeBuilder.AddInterfaceImplementation(Context.GetInterfaceByName(literal, usingNamespaces));
                         }
                         break;
                     case TokenType.SEPARATOR:
@@ -163,6 +195,7 @@ namespace TokensBuilder
                         usingNamespaces.Add(reader.string_values.Peek());
                         break;
                     case TokenType.INCLUDE:
+                        Assembly.LoadFrom(reader.string_values.Peek());
                         break;
                     case TokenType.BREAKPOINT:
                         Context.generator.Emit(OpCodes.Break);
@@ -170,6 +203,7 @@ namespace TokensBuilder
                         break;
                     case TokenType.IMPLEMENTS:
                         CheckOnAllClosed();
+                        implements = true;
                         break;
                     case TokenType.EXTENDS:
                         CheckOnAllClosed();
