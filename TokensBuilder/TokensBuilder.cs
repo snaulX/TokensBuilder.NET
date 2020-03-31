@@ -29,11 +29,14 @@ namespace TokensBuilder
                 if (index > 1) appName = args[index + 1];
                 foreach (string fileName in args[0].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    gen = new Generator(fileName);
-                    gen.config.appName = appName.IsEmpty() ? System.IO.Path.GetFileNameWithoutExtension(fileName) : appName;
-                    gen.config.outputType = kind;
+                    gen = new Generator();
+                    gen.reader.SetPath(fileName);
+                    Config.appName = appName.IsEmpty() ? System.IO.Path.GetFileNameWithoutExtension(fileName) : appName;
+                    Config.outputType = kind;
+                    Context.CreateAssembly(true);
                     gen.Generate();
                 }
+                Context.Finish();
             }
         }
 

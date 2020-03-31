@@ -15,7 +15,6 @@ namespace TokensBuilder
         public string currentNamespace = "";
         public List<string> usingNamespaces = new List<string>();
         public bool initClass = false;
-        public Config config;
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         List<TokensError> errors = new List<TokensError>();
@@ -29,26 +28,28 @@ namespace TokensBuilder
                 TokenType curToken = reader.tokens.Peek();
                 if (curToken == TokenType.LITERAL)
                 {
-                    string baseClassName = reader.string_values.Peek();
+                    if (Config.header == HeaderType.CLASS)
+                    {
+                        Context.mainType.SetParent(Type.GetType(reader.string_values.Peek()));
+                    }
+                    else
+                    {
+                        errors.Add(new InvalidHeaderError(line, Config.header, "extends directive can be only with class header"));
+                    }
                 }
                 else
                 {
                     errors.Add(new InvalidTokenError(line, curToken));
                 }
             });
+            usingNamespaces.Add(""); //empty namespace
             reader = new TokensReader();
-            config = new Config();
-        }
-
-        public Generator(string path)
-        {
-            reader = new TokensReader(path);
-            config = new Config();
         }
 
         public void Generate()
         {
-            reader.GetHeaderAndTarget(out config.header, out config.platform);
+            reader.GetHeaderAndTarget(out byte h, out Config.platform);
+            Config.header = (HeaderType) h;
             reader.ReadTokens();
             reader.EndWork();
             while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
@@ -95,10 +96,11 @@ namespace TokensBuilder
                         line++;
                         break;
                     case TokenType.CLASS:
-                        Console.WriteLine(string.Join(", ", usingNamespaces));
                         TypeAttributes typeAttributes = TypeAttributes.Class;
                         SecurityDegree securityDegree = reader.securities.Peek();
                         Context.classType = reader.class_types.Peek();
+                        if (Context.classType == ClassType.FINAL) typeAttributes |= TypeAttributes.Sealed;
+                        else if (Context.classType == ClassType.INTERFACE) typeAttributes = TypeAttributes.Interface;
                         if (securityDegree == SecurityDegree.PRIVATE) typeAttributes |= TypeAttributes.NotPublic;
                         else if (securityDegree == SecurityDegree.PUBLIC) typeAttributes |= TypeAttributes.Public;
                         Context.typeBuilder = Context.moduleBuilder.DefineType(

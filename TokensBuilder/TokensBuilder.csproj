@@ -48,10 +48,12 @@
   <ItemGroup>
     <Compile Include="Config.cs" />
     <Compile Include="Context.cs" />
+    <Compile Include="Errors\InvalidHeaderError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
     <Compile Include="Errors\NeedEndError.cs" />
     <Compile Include="Errors\TypeNotFoundError.cs" />
     <Compile Include="Generator.cs" />
+    <Compile Include="HeaderType.cs" />
     <Compile Include="TokensBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TokensError.cs" />
