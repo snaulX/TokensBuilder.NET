@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -24,7 +25,8 @@ namespace TokensBuilder
 
         public Generator()
         {
-            directives.Add("extends", () => {
+            directives.Add("extends", () =>
+            {
                 TokenType curToken = reader.tokens.Peek();
                 if (curToken == TokenType.LITERAL)
                 {
@@ -42,6 +44,26 @@ namespace TokensBuilder
                     errors.Add(new InvalidTokenError(line, curToken));
                 }
             });
+            directives.Add("implements", () =>
+            {
+                TokenType tokenType = TokenType.LITERAL;
+                while (tokenType != TokenType.NEWLN)
+                {
+                    if (Config.header == HeaderType.CLASS)
+                        Context.mainType.AddInterfaceImplementation(Type.GetType(reader.string_values.Peek()));
+                    else
+                        errors.Add(new InvalidHeaderError(line, Config.header, "implements directive can be only with class header"));
+                }
+                isDirective = false;
+            });
+            directives.Add("if", () =>
+            {
+                //something
+            });
+            directives.Add("endif", () =>
+            {
+                //something
+            });
             usingNamespaces.Add(""); //empty namespace
             reader = new TokensReader();
         }
@@ -49,13 +71,17 @@ namespace TokensBuilder
         public void Generate()
         {
             reader.GetHeaderAndTarget(out byte h, out Config.platform);
-            Config.header = (HeaderType) h;
+            Config.header = (HeaderType)h;
             reader.ReadTokens();
             reader.EndWork();
             while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
             if (needEndBlock > 0) errors.Add(new NeedEndError(line, "Need " + needEndBlock + " end of blocks"));
             if (needEndSequence > 0) errors.Add(new NeedEndError(line, "Need " + needEndSequence + " end of sequences"));
             if (needEndStatement > 0) errors.Add(new NeedEndError(line, "Need " + needEndStatement + " end of statements"));
+            foreach (TokensError error in errors)
+            {
+                Console.Error.WriteLine(error);
+            }
         }
 
         private void CheckOnAllClosed()
@@ -132,7 +158,14 @@ namespace TokensBuilder
                         string literal = reader.string_values.Peek();
                         if (isDirective)
                         {
-                            directives[literal].Invoke();
+                            try
+                            {
+                                directives[literal].Invoke();
+                            }
+                            catch (KeyNotFoundException)
+                            {
+                                errors.Add(new DirectiveError(line, $"Directive by name {literal} not found"));
+                            }
                         }
                         else if (implements)
                         {
@@ -225,7 +258,17 @@ namespace TokensBuilder
 
         public void ParseTokensLibrary(string path, ref TokensReader treader)
         {
-            TokensReader tokensReader = new TokensReader(path);
+            TokensReader tokensReader = new TokensReader();
+            try
+            {
+                if (path.StartsWith("<")) tokensReader.SetPath(path.Remove(path.Length - 2) + ".tokens");
+                else tokensReader.SetPath(AppDomain.CurrentDomain.BaseDirectory + path + ".tokens");
+            }
+            catch
+            {
+                errors.Add(new TokensLibraryError(line, $"Tokens library by path {path} not found"));
+                return;
+            }
             tokensReader.GetHeaderAndTarget(out byte header, out _);
             if (header != 5) throw new InvalidHeaderException(header);
             reader.ReadTokens();

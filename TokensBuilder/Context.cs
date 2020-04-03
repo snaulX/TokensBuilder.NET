@@ -64,7 +64,7 @@ namespace TokensBuilder
             if (Config.header == HeaderType.CLASS || Config.header == HeaderType.SCRIPT)
             {
                 mainType = moduleBuilder.DefineType(
-                    Config.appName + "TokensClass",
+                    Config.MainClassName,
                     TypeAttributes.Class | TypeAttributes.NotPublic | TypeAttributes.Sealed);
             }
         }

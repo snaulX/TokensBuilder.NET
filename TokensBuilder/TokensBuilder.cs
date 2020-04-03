@@ -17,7 +17,21 @@ namespace TokensBuilder
             {
                 Console.WriteLine("TokensBuilder.NET (c) 2020-2020\n" +
                     "Author: snaulX\n" +
-                    "GitHub repository: https://github.com/snaulX/tokensbuilder.net \n");
+                    "GitHub repository: https://github.com/snaulX/tokensbuilder.net \n" +
+                    "For get help use command -h\n");
+            }
+            else if (args[0] == "-h")
+            {
+                if (args.Length == 1)
+                {
+                    Console.WriteLine("TokensBuilder (name of tokens file[s] written how one cmd argument) [commands]\n" +
+                        "Commands:\n" +
+                        "\t-type (kind of building application)\tSet type of building application. Types:\n" +
+                        $"\t\t{string.Join("\n\t\t", Enum.GetValues(typeof(PEFileKinds)))}\n" +
+                        "\t-o (name of output file)\tSet name of output file (application name).\n" +
+                        "\t-name (name of main class)\tSet name of main auto-generated class." +
+                        " Will work only if tokens header is Script or Class\n");
+                }
             }
             else
             {
@@ -27,6 +41,8 @@ namespace TokensBuilder
                 if (index > 1) kind = (PEFileKinds)Enum.Parse(typeof(PEFileKinds), args[index + 1]);
                 index = Array.IndexOf(args, "-o");
                 if (index > 1) appName = args[index + 1];
+                index = Array.IndexOf(args, "-name");
+                if (index > 1) Config.MainClassName = args[index + 1];
                 foreach (string fileName in args[0].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     gen = new Generator();

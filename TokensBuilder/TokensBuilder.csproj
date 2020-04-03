@@ -48,9 +48,11 @@
   <ItemGroup>
     <Compile Include="Config.cs" />
     <Compile Include="Context.cs" />
+    <Compile Include="Errors\DirectiveError.cs" />
     <Compile Include="Errors\InvalidHeaderError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
     <Compile Include="Errors\NeedEndError.cs" />
+    <Compile Include="Errors\TokensLibraryError.cs" />
     <Compile Include="Errors\TypeNotFoundError.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="HeaderType.cs" />
