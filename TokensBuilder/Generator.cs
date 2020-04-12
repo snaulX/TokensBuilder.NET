@@ -32,7 +32,7 @@ namespace TokensBuilder
                 {
                     if (Config.header == HeaderType.CLASS)
                     {
-                        Context.mainType.SetParent(Type.GetType(reader.string_values.Peek()));
+                        Context.mainClass.Extends(reader.string_values.Peek());
                     }
                     else
                     {
@@ -50,7 +50,7 @@ namespace TokensBuilder
                 while (tokenType != TokenType.NEWLN)
                 {
                     if (Config.header == HeaderType.CLASS)
-                        Context.mainType.AddInterfaceImplementation(Type.GetType(reader.string_values.Peek()));
+                        Context.mainClass.Implements(reader.string_values.Peek());
                     else
                         errors.Add(new InvalidHeaderError(line, Config.header, "implements directive can be only with class header"));
                 }
@@ -75,9 +75,7 @@ namespace TokensBuilder
             reader.ReadTokens();
             reader.EndWork();
             while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
-            if (needEndBlock > 0) errors.Add(new NeedEndError(line, "Need " + needEndBlock + " end of blocks"));
-            if (needEndSequence > 0) errors.Add(new NeedEndError(line, "Need " + needEndSequence + " end of sequences"));
-            if (needEndStatement > 0) errors.Add(new NeedEndError(line, "Need " + needEndStatement + " end of statements"));
+            CheckOnAllClosed();
             foreach (TokensError error in errors)
             {
                 Console.Error.WriteLine(error);
@@ -86,9 +84,9 @@ namespace TokensBuilder
 
         private void CheckOnAllClosed()
         {
-            if (needEndBlock > 0) errors.Add(new NeedEndError(line, "Need end of block"));
-            else if (needEndSequence > 0) errors.Add(new NeedEndError(line, "Need end of array"));
-            else if (needEndStatement > 0) errors.Add(new NeedEndError(line, "Need end of statement"));
+            if (needEndBlock > 0) errors.Add(new NeedEndError(line, $"Need end of {needEndBlock} blocks"));
+            else if (needEndSequence > 0) errors.Add(new NeedEndError(line, $"Need end of {needEndSequence} arrays"));
+            else if (needEndStatement > 0) errors.Add(new NeedEndError(line, $"Need end of {needEndStatement} statements"));
         }
 
         private bool IsEnd(TokenType token)
@@ -107,7 +105,7 @@ namespace TokensBuilder
             else if (extends)
             {
                 if (token == TokenType.LITERAL)
-                    Context.typeBuilder.SetParent(Context.GetTypeByName(reader.string_values.Peek(), usingNamespaces));
+                    Context.classBuilder.Extends(reader.string_values.Peek());
                 else
                     errors.Add(new InvalidTokenError(line, TokenType.LITERAL));
                 extends = false;
@@ -122,15 +120,9 @@ namespace TokensBuilder
                         line++;
                         break;
                     case TokenType.CLASS:
-                        TypeAttributes typeAttributes = TypeAttributes.Class;
-                        SecurityDegree securityDegree = reader.securities.Peek();
-                        Context.classType = reader.class_types.Peek();
-                        if (Context.classType == ClassType.FINAL) typeAttributes |= TypeAttributes.Sealed;
-                        else if (Context.classType == ClassType.INTERFACE) typeAttributes = TypeAttributes.Interface;
-                        if (securityDegree == SecurityDegree.PRIVATE) typeAttributes |= TypeAttributes.NotPublic;
-                        else if (securityDegree == SecurityDegree.PUBLIC) typeAttributes |= TypeAttributes.Public;
-                        Context.typeBuilder = Context.moduleBuilder.DefineType(
-                            currentNamespace + reader.string_values.Peek(), typeAttributes);
+                        Context.classBuilder = 
+                            new ClassBuilder(reader.string_values.Peek(), currentNamespace,
+                            reader.class_types.Peek(), reader.securities.Peek());
                         initClass = true;
                         break;
                     case TokenType.FUNCTION:
@@ -144,7 +136,14 @@ namespace TokensBuilder
                             extends = false;
                             needEndBlock++;
                         }
-                        else needEndBlock--;
+                        else
+                        {
+                            if (!Context.classBuilder.IsEmpty) 
+                            {
+                                Context.classBuilder.End();
+                            }
+                            needEndBlock--;
+                        }
                         break;
                     case TokenType.STATEMENT:
                         if (reader.bool_values.Peek()) needEndStatement++;
@@ -160,21 +159,27 @@ namespace TokensBuilder
                         {
                             try
                             {
-                                directives[literal].Invoke();
+                                directives[literal]();
                             }
                             catch (KeyNotFoundException)
                             {
                                 errors.Add(new DirectiveError(line, $"Directive by name {literal} not found"));
                             }
+                            isDirective = false;
+                        }
+                        else if (extends)
+                        {
+                            Context.classBuilder.Extends(literal);
                         }
                         else if (implements)
                         {
-                            Context.typeBuilder.AddInterfaceImplementation(Context.GetInterfaceByName(literal, usingNamespaces));
+                            Context.classBuilder.Implements(literal);
                         }
                         break;
                     case TokenType.SEPARATOR:
                         break;
                     case TokenType.EXPRESSION_END:
+                        needEnd = false;
                         break;
                     case TokenType.LOOP:
                         break;

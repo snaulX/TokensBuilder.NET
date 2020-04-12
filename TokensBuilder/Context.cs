@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection.Emit;
 using System.Reflection;
 using TokensAPI;
@@ -12,17 +11,15 @@ namespace TokensBuilder
         public static AssemblyBuilder assemblyBuilder = null;
         public static AssemblyName assemblyName = new AssemblyName();
         public static ModuleBuilder moduleBuilder = null;
-        public static TypeBuilder typeBuilder = null, mainType = null;
+        public static ClassBuilder classBuilder = null, mainClass = null;
         public static MethodBuilder methodBuilder = null;
         public static FieldBuilder fieldBuilder = null;
         public static ILGenerator generator => constructorBuilder == null ? methodBuilder.GetILGenerator() : constructorBuilder.GetILGenerator();
-        public static LocalBuilder localBuilder = null;
         public static Dictionary<string, Label> labels = new Dictionary<string, Label>();
         public static ConstructorBuilder constructorBuilder = null;
         public static EnumBuilder enumBuilder = null;
         public static PropertyBuilder propertyBuilder = null;
         public static ParameterBuilder parameterBuilder = null;
-        public static ClassType classType = ClassType.DEFAULT;
 
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
@@ -47,6 +44,7 @@ namespace TokensBuilder
             return null;
         }
 
+
         public static void CreateAssembly(bool autoAssemblyName = false)
         {
             if (Config.header == HeaderType.LIBRARY) Config.outputType = PEFileKinds.Dll;
@@ -63,9 +61,7 @@ namespace TokensBuilder
             moduleBuilder = assemblyBuilder.DefineDynamicModule(Config.appName);
             if (Config.header == HeaderType.CLASS || Config.header == HeaderType.SCRIPT)
             {
-                mainType = moduleBuilder.DefineType(
-                    Config.MainClassName,
-                    TypeAttributes.Class | TypeAttributes.NotPublic | TypeAttributes.Sealed);
+                mainClass = new ClassBuilder(Config.MainClassName, "", ClassType.STATIC, SecurityDegree.PRIVATE);
             }
         }
 
