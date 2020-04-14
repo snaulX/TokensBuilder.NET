@@ -17,7 +17,7 @@ namespace TokensBuilder
             {
                 Console.WriteLine("TokensBuilder.NET (c) 2020-2020\n" +
                     "Author: snaulX\n" +
-                    "GitHub repository: https://github.com/snaulX/tokensbuilder.net \n" +
+                    "GitHub repository: https://github.com/mino-lang/TokensBuilder.NET \n" +
                     "For get help use command -h\n");
             }
             else if (args[0] == "-h")
@@ -55,6 +55,8 @@ namespace TokensBuilder
                 Context.Finish();
             }
         }
+
+        public static void Error(TokensError error) => gen.errors.Add(error);
 
         public static void Add(this TokensReader a, TokensReader b)
         {

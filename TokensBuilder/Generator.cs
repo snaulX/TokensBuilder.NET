@@ -17,8 +17,8 @@ namespace TokensBuilder
         public List<string> usingNamespaces = new List<string>();
         public bool initClass = false;
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
-        byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
-        List<TokensError> errors = new List<TokensError>();
+        public byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
+        public List<TokensError> errors = new List<TokensError>();
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false;
         private bool? isActual = null; //need three values
@@ -238,7 +238,7 @@ namespace TokensBuilder
                         Assembly.LoadFrom(reader.string_values.Peek());
                         break;
                     case TokenType.BREAKPOINT:
-                        Context.generator.Emit(OpCodes.Break);
+                        Context.functionBuilder.generator.Emit(OpCodes.Break);
                         needEnd = true;
                         break;
                     case TokenType.IMPLEMENTS:
@@ -256,6 +256,14 @@ namespace TokensBuilder
                     case TokenType.YIELD:
                         break;
                     case TokenType.LAMBDA:
+                        break;
+                    case TokenType.ASYNC:
+                        bool async = reader.bool_values.Peek();
+                        break;
+                    case TokenType.PARAMETER_TYPE:
+                        bool type = reader.bool_values.Peek();
+                        break;
+                    case TokenType.REF:
                         break;
                 }
             }

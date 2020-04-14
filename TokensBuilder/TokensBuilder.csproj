@@ -44,6 +44,9 @@
     <Reference Include="TokensAPI">
       <HintPath>..\..\..\..\snaulX\Mino\TokensAPI\CSharp\TokensAPI\TokensAPI\bin\Debug\netstandard2.0\TokensAPI.dll</HintPath>
     </Reference>
+    <Reference Include="TokensStandart">
+      <HintPath>..\..\..\..\snaulX\Mino\TokensStandart.NET\TokensStandart\bin\Debug\netstandard2.0\TokensStandart.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClassBuilder.cs" />
@@ -53,6 +56,7 @@
     <Compile Include="Errors\InvalidHeaderError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
     <Compile Include="Errors\NeedEndError.cs" />
+    <Compile Include="Errors\PlatformImplementationError.cs" />
     <Compile Include="Errors\TokensLibraryError.cs" />
     <Compile Include="Errors\TypeNotFoundError.cs" />
     <Compile Include="FunctionBuilder.cs" />

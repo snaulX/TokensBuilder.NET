@@ -12,14 +12,9 @@ namespace TokensBuilder
         public static AssemblyName assemblyName = new AssemblyName();
         public static ModuleBuilder moduleBuilder = null;
         public static ClassBuilder classBuilder = null, mainClass = null;
-        public static MethodBuilder methodBuilder = null;
-        public static FieldBuilder fieldBuilder = null;
-        public static ILGenerator generator => constructorBuilder == null ? methodBuilder.GetILGenerator() : constructorBuilder.GetILGenerator();
+        public static FunctionBuilder functionBuilder = null;
         public static Dictionary<string, Label> labels = new Dictionary<string, Label>();
-        public static ConstructorBuilder constructorBuilder = null;
-        public static EnumBuilder enumBuilder = null;
-        public static PropertyBuilder propertyBuilder = null;
-        public static ParameterBuilder parameterBuilder = null;
+        private static Generator gen => TokensBuilder.gen;
 
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
@@ -63,6 +58,22 @@ namespace TokensBuilder
             {
                 mainClass = new ClassBuilder(Config.MainClassName, "", ClassType.STATIC, SecurityDegree.PRIVATE);
             }
+        }
+
+        public static FieldBuilder CreateField()
+        {
+            FieldAttributes fieldAttributes;
+            SecurityDegree security = gen.reader.securities.Peek();
+            if (security == SecurityDegree.PUBLIC) fieldAttributes = FieldAttributes.Public;
+            else if (security == SecurityDegree.PRIVATE) fieldAttributes = FieldAttributes.Private;
+            else if (security == SecurityDegree.INTERNAL) fieldAttributes = FieldAttributes.Assembly;
+            else fieldAttributes = FieldAttributes.Family;
+            VarType varType = gen.reader.var_types.Peek();
+            if (varType == VarType.CONST) fieldAttributes |= FieldAttributes.Literal;
+            else if (varType == VarType.FINAL) fieldAttributes |= FieldAttributes.InitOnly;
+            else if (varType == VarType.STATIC) fieldAttributes |= FieldAttributes.Static;
+            string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
+            return classBuilder.DefineField(name, typeName, fieldAttributes);
         }
 
         public static void Finish()
