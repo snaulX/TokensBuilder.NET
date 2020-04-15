@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
 using TokensAPI;
+using TokensBuilder.Errors;
+using TokensStandart;
 
 namespace TokensBuilder
 {
@@ -13,8 +15,12 @@ namespace TokensBuilder
         public static ModuleBuilder moduleBuilder = null;
         public static ClassBuilder classBuilder = null, mainClass = null;
         public static FunctionBuilder functionBuilder = null;
-        public static Dictionary<string, Label> labels = new Dictionary<string, Label>();
         private static Generator gen => TokensBuilder.gen;
+        public static MethodInfo entrypoint;
+        public static readonly CustomAttributeBuilder entrypointAttr = new CustomAttributeBuilder(
+                        typeof(EntrypointAttribute).GetConstructor(Type.EmptyTypes), new object[] { }),
+            scriptAttr = new CustomAttributeBuilder(
+                        typeof(ScriptAttribute).GetConstructor(Type.EmptyTypes), new object[] { });
 
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
@@ -57,6 +63,14 @@ namespace TokensBuilder
             if (Config.header == HeaderType.CLASS || Config.header == HeaderType.SCRIPT)
             {
                 mainClass = new ClassBuilder(Config.MainClassName, "", ClassType.STATIC, SecurityDegree.PRIVATE);
+                if (Config.header == HeaderType.SCRIPT)
+                {
+                    mainClass.SetAttribute(scriptAttr);
+                    functionBuilder = new FunctionBuilder(mainClass, gen.reader.string_values.Peek(), 
+                        gen.reader.string_values.Peek(), gen.reader.function_types.Peek(), gen.reader.securities.Peek());
+                    functionBuilder.SetAttribute(scriptAttr);
+                    functionBuilder.SetAttribute(entrypointAttr);
+                }
             }
         }
 
@@ -74,6 +88,27 @@ namespace TokensBuilder
             else if (varType == VarType.STATIC) fieldAttributes |= FieldAttributes.Static;
             string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
             return classBuilder.DefineField(name, typeName, fieldAttributes);
+        }
+
+        public static CustomAttributeBuilder FindAttribute(IEnumerable<string> namespaces)
+        {
+            string attributeName = gen.reader.string_values.Peek();
+            Type[] ctorTypes = Type.EmptyTypes;
+            object[] args = new object[] { };
+            if (gen.reader.tokens[0] == TokenType.STATEMENT)
+            {
+                gen.reader.tokens.RemoveAt(0);
+                if (gen.reader.bool_values.Peek())
+                {
+                    //pass
+                }
+                else
+                {
+                    TokensBuilder.Error(new NeedEndError(gen.line, "Extra closing bracket in attribute"));
+                }
+            }
+            return new CustomAttributeBuilder(
+                GetTypeByName(attributeName, namespaces).GetConstructor(ctorTypes), args); //it`s a pass
         }
 
         public static void Finish()

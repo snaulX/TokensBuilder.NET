@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
@@ -9,7 +7,7 @@ using TokensBuilder.Errors;
 
 namespace TokensBuilder
 {
-    public class Generator
+    public sealed class Generator
     {
         public uint line = 0;
         public TokensReader reader;
@@ -19,9 +17,12 @@ namespace TokensBuilder
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         public byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         public List<TokensError> errors = new List<TokensError>();
+        public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
+        public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false;
-        private bool? isActual = null; //need three values
+        public bool? isActual = null; //need three values
+        private bool isFuncBody => Context.functionBuilder.IsEmpty;
 
         public Generator()
         {
@@ -63,6 +64,14 @@ namespace TokensBuilder
             directives.Add("endif", () =>
             {
                 //something
+            });
+            directives.Add("outtype", () =>
+            {
+                string outType = reader.string_values.Peek();
+                if (!Enum.TryParse(outType, out Config.outputType))
+                {
+                    errors.Add(new InvalidOutTypeError(line, outType));
+                }
             });
             usingNamespaces.Add(""); //empty namespace
             reader = new TokensReader();
@@ -128,6 +137,9 @@ namespace TokensBuilder
                     case TokenType.FUNCTION:
                         break;
                     case TokenType.VAR:
+                        if (isFuncBody)
+                        {
+                        }
                         break;
                     case TokenType.BLOCK:
                         if (reader.bool_values.Peek())

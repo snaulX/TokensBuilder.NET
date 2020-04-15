@@ -54,6 +54,7 @@
     <Compile Include="Context.cs" />
     <Compile Include="Errors\DirectiveError.cs" />
     <Compile Include="Errors\InvalidHeaderError.cs" />
+    <Compile Include="Errors\InvalidOutTypeError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
     <Compile Include="Errors\NeedEndError.cs" />
     <Compile Include="Errors\PlatformImplementationError.cs" />
