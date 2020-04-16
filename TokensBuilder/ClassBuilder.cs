@@ -82,6 +82,26 @@ namespace TokensBuilder
             }
         }
 
+        public void CreateMethod(string name, string typeName = "", FuncType type = FuncType.DEFAULT,
+            SecurityDegree security = SecurityDegree.PUBLIC)
+        {
+            MethodAttributes attributes;
+
+            //function security
+            if (security == SecurityDegree.INTERNAL) attributes = MethodAttributes.Assembly;
+            else if (security == SecurityDegree.PRIVATE) attributes = MethodAttributes.Private;
+            else if (security == SecurityDegree.PROTECTED) attributes = MethodAttributes.Family;
+            else attributes = MethodAttributes.Public;
+
+            //function type
+            if (type == FuncType.STATIC) attributes |= MethodAttributes.Static;
+            else if (type == FuncType.ABSTRACT) attributes |= MethodAttributes.Abstract;
+            else if (type == FuncType.FINAL) attributes |= MethodAttributes.Final;
+            else if (type == FuncType.VIRTUAL) attributes |= MethodAttributes.Virtual;
+
+            methodBuilder = new FunctionBuilder(typeBuilder.DefineMethod(name, attributes, CallingConventions.Standard));
+        }
+
         public void Extends(string superTypeName) => typeBuilder.SetParent(Context.GetTypeByName(superTypeName, gen.usingNamespaces));
 
         public void Implements(string interfaceName) => typeBuilder.AddInterfaceImplementation(

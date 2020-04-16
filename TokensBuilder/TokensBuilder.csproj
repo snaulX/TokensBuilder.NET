@@ -52,6 +52,7 @@
     <Compile Include="ClassBuilder.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Context.cs" />
+    <Compile Include="EntrypointAttribute.cs" />
     <Compile Include="Errors\DirectiveError.cs" />
     <Compile Include="Errors\InvalidHeaderError.cs" />
     <Compile Include="Errors\InvalidOutTypeError.cs" />

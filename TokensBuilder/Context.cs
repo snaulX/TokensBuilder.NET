@@ -66,8 +66,9 @@ namespace TokensBuilder
                 if (Config.header == HeaderType.SCRIPT)
                 {
                     mainClass.SetAttribute(scriptAttr);
-                    functionBuilder = new FunctionBuilder(mainClass, gen.reader.string_values.Peek(), 
+                    mainClass.CreateMethod(gen.reader.string_values.Peek(), 
                         gen.reader.string_values.Peek(), gen.reader.function_types.Peek(), gen.reader.securities.Peek());
+                    functionBuilder = mainClass.methodBuilder;
                     functionBuilder.SetAttribute(scriptAttr);
                     functionBuilder.SetAttribute(entrypointAttr);
                 }

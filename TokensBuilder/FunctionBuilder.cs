@@ -19,13 +19,14 @@ namespace TokensBuilder
         public void DeclareLocal(string name, string typeName) => 
             localVariables.Add(name, generator.DeclareLocal(Context.GetTypeByName(typeName, gen.usingNamespaces)));
 
-        public FunctionBuilder(ClassBuilder classBuilder, string name, string typeName = "", 
-            FuncType type = FuncType.DEFAULT, SecurityDegree security = SecurityDegree.PUBLIC)
+        public FunctionBuilder(MethodBuilder methodBuilder)
         {
-            if (type == FuncType.STATIC)
-            {
-                //methodBuilder = classBuilder.typeBuilder.DefineMethod(name, MethodAttributes.Static, CallingConventions.Standard);
-            }
+            this.methodBuilder = methodBuilder;
+        }
+
+        public FunctionBuilder(ConstructorBuilder constructorBuilder)
+        {
+            this.constructorBuilder = constructorBuilder;
         }
 
         public void SetAttribute(CustomAttributeBuilder attribute)

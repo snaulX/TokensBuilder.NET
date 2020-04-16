@@ -20,7 +20,8 @@ namespace TokensBuilder
         public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         //flags
-        private bool isDirective = false, needEnd = false, extends = false, implements = false;
+        private bool isDirective = false, needEnd = false, extends = false, implements = false, wasLiteral = false,
+            isFuncArgs = false;
         public bool? isActual = null; //need three values
         private bool isFuncBody => Context.functionBuilder.IsEmpty;
 
@@ -139,6 +140,7 @@ namespace TokensBuilder
                     case TokenType.VAR:
                         if (isFuncBody)
                         {
+                            Context.functionBuilder.DeclareLocal(reader.string_values.Peek(), reader.string_values.Peek());
                         }
                         break;
                     case TokenType.BLOCK:
@@ -167,6 +169,7 @@ namespace TokensBuilder
                         break;
                     case TokenType.LITERAL:
                         string literal = reader.string_values.Peek();
+                        wasLiteral = true;
                         if (isDirective)
                         {
                             try
