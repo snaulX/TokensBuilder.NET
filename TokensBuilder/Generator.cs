@@ -13,7 +13,7 @@ namespace TokensBuilder
         public TokensReader reader;
         public string currentNamespace = "";
         public List<string> usingNamespaces = new List<string>();
-        public bool initClass = false;
+        public bool initClass = false, tryDirective = false;
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         public byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         public List<TokensError> errors = new List<TokensError>();
@@ -21,9 +21,10 @@ namespace TokensBuilder
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, wasLiteral = false,
-            isFuncArgs = false;
+            isFuncArgs = false, ifDirective = true;
         public bool? isActual = null; //need three values
         private bool isFuncBody => Context.functionBuilder.IsEmpty;
+        private ILGenerator gen => Context.functionBuilder.generator;
 
         public Generator()
         {
@@ -74,6 +75,14 @@ namespace TokensBuilder
                     errors.Add(new InvalidOutTypeError(line, outType));
                 }
             });
+            directives.Add("try", () =>
+            {
+                tryDirective = true;
+            });
+            directives.Add("endtry", () =>
+            {
+                tryDirective = false;
+            });
             usingNamespaces.Add(""); //empty namespace
             reader = new TokensReader();
         }
@@ -84,6 +93,8 @@ namespace TokensBuilder
             Config.header = (HeaderType)h;
             reader.ReadTokens();
             reader.EndWork();
+            //Console.WriteLine(string.Join(", ", reader.string_values));
+            Console.WriteLine(reader.string_values.IsEmpty());
             while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
             CheckOnAllClosed();
             foreach (TokensError error in errors)
@@ -207,6 +218,17 @@ namespace TokensBuilder
                     case TokenType.OPERATOR:
                         break;
                     case TokenType.VALUE:
+                        switch (reader.byte_values.Peek())
+                        {
+                            case 0:
+                                gen.Emit(OpCodes.Ldnull);
+                                break;
+                            case 1:
+                                break;
+                            case 2:
+                                gen.Emit(OpCodes.Ldstr, (string) reader.values.Peek());
+                                break;
+                        }
                         break;
                     case TokenType.NULLABLE:
                         break;

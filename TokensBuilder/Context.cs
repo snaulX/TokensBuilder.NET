@@ -66,8 +66,7 @@ namespace TokensBuilder
                 if (Config.header == HeaderType.SCRIPT)
                 {
                     mainClass.SetAttribute(scriptAttr);
-                    mainClass.CreateMethod(gen.reader.string_values.Peek(), 
-                        gen.reader.string_values.Peek(), gen.reader.function_types.Peek(), gen.reader.securities.Peek());
+                    mainClass.CreateMethod("Main", "void", FuncType.STATIC, SecurityDegree.PRIVATE);
                     functionBuilder = mainClass.methodBuilder;
                     functionBuilder.SetAttribute(scriptAttr);
                     functionBuilder.SetAttribute(entrypointAttr);
@@ -114,6 +113,42 @@ namespace TokensBuilder
 
         public static void Finish()
         {
+            if (!mainClass.IsEmpty)
+            {
+                try
+                {
+                    assemblyBuilder.SetEntryPoint(mainClass.FindEntrypoint(), Config.outputType);
+                }
+                catch
+                {
+                    //errors.Add(new );
+                }
+                mainClass.End();
+            }
+            else
+            {
+                MethodInfo method = null;
+                foreach (Type type in moduleBuilder.GetTypes())
+                {
+                    foreach (MethodInfo methodInfo in type.GetMethods())
+                    {
+                        if (methodInfo.GetCustomAttribute<EntrypointAttribute>() != null)
+                        {
+                            method = methodInfo;
+                            break;
+                        }
+                    }
+                    if (method != null) break;
+                }
+                try
+                {
+                    assemblyBuilder.SetEntryPoint(method, Config.outputType);
+                }
+                catch
+                {
+                    //error
+                }
+            }
             if (Config.header != (HeaderType.BUILDSCRIPT | HeaderType.TOKENSLIBRARY)) assemblyBuilder.Save(Config.appName);
         }
     }
