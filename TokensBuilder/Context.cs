@@ -70,6 +70,7 @@ namespace TokensBuilder
                     functionBuilder = mainClass.methodBuilder;
                     functionBuilder.SetAttribute(scriptAttr);
                     functionBuilder.SetAttribute(entrypointAttr);
+                    assemblyBuilder.SetEntryPoint(functionBuilder.methodBuilder.GetBaseDefinition());
                 }
             }
         }
@@ -113,19 +114,7 @@ namespace TokensBuilder
 
         public static void Finish()
         {
-            if (!mainClass.IsEmpty)
-            {
-                try
-                {
-                    assemblyBuilder.SetEntryPoint(mainClass.FindEntrypoint(), Config.outputType);
-                }
-                catch
-                {
-                    //errors.Add(new );
-                }
-                mainClass.End();
-            }
-            else
+            if (mainClass.IsEmpty)
             {
                 MethodInfo method = null;
                 foreach (Type type in moduleBuilder.GetTypes())
@@ -148,6 +137,14 @@ namespace TokensBuilder
                 {
                     //error
                 }
+            }
+            else
+            {
+                mainClass.methodBuilder.generator.Emit(
+                    OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) })
+                    );
+                mainClass.methodBuilder.generator.Emit(OpCodes.Ret);
+                mainClass.End();
             }
             if (Config.header != (HeaderType.BUILDSCRIPT | HeaderType.TOKENSLIBRARY)) assemblyBuilder.Save(Config.FileName);
         }

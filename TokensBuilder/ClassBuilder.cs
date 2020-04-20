@@ -112,16 +112,6 @@ namespace TokensBuilder
         public FieldBuilder DefineField(string name, string typeName, FieldAttributes fieldAttributes) =>
             typeBuilder.DefineField(name, Context.GetTypeByName(typeName, gen.usingNamespaces), fieldAttributes);
 
-        public MethodInfo FindEntrypoint()
-        {
-            foreach (MethodInfo method in typeBuilder.GetMethods())
-            {
-                if (method.GetCustomAttribute<EntrypointAttribute>() != null)
-                    return method;
-            }
-            return null;
-        }
-
         public Type End()
         {
             Type rt = typeBuilder.CreateType();

@@ -11,7 +11,7 @@ namespace TokensBuilder
     {
         public uint line = 0;
         public TokensReader reader;
-        public string currentNamespace = "";
+        public string currentNamespace = "", wasLiteral = "";
         public List<string> usingNamespaces = new List<string>();
         public bool initClass = false, tryDirective = false;
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
@@ -20,8 +20,8 @@ namespace TokensBuilder
         public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         //flags
-        private bool isDirective = false, needEnd = false, extends = false, implements = false, wasLiteral = false,
-            isFuncArgs = false, ifDirective = true;
+        private bool isDirective = false, needEnd = false, extends = false, implements = false, isFuncArgs = false,
+            ifDirective = true;
         public bool? isActual = null; //need three values
         private bool isFuncBody => Context.functionBuilder.IsEmpty;
         private ILGenerator gen => Context.functionBuilder.generator;
@@ -178,7 +178,6 @@ namespace TokensBuilder
                         break;
                     case TokenType.LITERAL:
                         string literal = reader.string_values.Peek();
-                        wasLiteral = true;
                         if (isDirective)
                         {
                             try
@@ -198,6 +197,14 @@ namespace TokensBuilder
                         else if (implements)
                         {
                             Context.classBuilder.Implements(literal);
+                        }
+                        else if (wasLiteral.IsEmpty())
+                        {
+                            wasLiteral = literal;
+                        }
+                        else
+                        {
+                            //pass
                         }
                         break;
                     case TokenType.SEPARATOR:
