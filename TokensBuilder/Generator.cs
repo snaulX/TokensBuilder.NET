@@ -93,8 +93,6 @@ namespace TokensBuilder
             Config.header = (HeaderType)h;
             reader.ReadTokens();
             reader.EndWork();
-            //Console.WriteLine(string.Join(", ", reader.string_values));
-            Console.WriteLine(reader.string_values.IsEmpty());
             while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
             CheckOnAllClosed();
             foreach (TokensError error in errors)

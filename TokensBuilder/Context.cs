@@ -59,7 +59,7 @@ namespace TokensBuilder
                 assemblyName.Name = Config.appName;
             }
             assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
-            moduleBuilder = assemblyBuilder.DefineDynamicModule(Config.appName);
+            moduleBuilder = assemblyBuilder.DefineDynamicModule(Config.FileName);
             if (Config.header == HeaderType.CLASS || Config.header == HeaderType.SCRIPT)
             {
                 mainClass = new ClassBuilder(Config.MainClassName, "", ClassType.STATIC, SecurityDegree.PRIVATE);
@@ -149,7 +149,7 @@ namespace TokensBuilder
                     //error
                 }
             }
-            if (Config.header != (HeaderType.BUILDSCRIPT | HeaderType.TOKENSLIBRARY)) assemblyBuilder.Save(Config.appName);
+            if (Config.header != (HeaderType.BUILDSCRIPT | HeaderType.TOKENSLIBRARY)) assemblyBuilder.Save(Config.FileName);
         }
     }
 }

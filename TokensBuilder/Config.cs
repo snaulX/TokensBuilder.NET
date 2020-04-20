@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Reflection.Emit;
 
 namespace TokensBuilder
@@ -12,9 +11,11 @@ namespace TokensBuilder
         public static HeaderType header = HeaderType.SCRIPT;
         public static string MainClassName
         {
-            get => _className.IsEmpty() ? appName + "TokenClass" : _className;
+            get => _className.IsEmpty() ? 
+                System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(appName) + "TokenClass" : _className;
             set => _className = value;
         }
+        public static string FileName => appName + (outputType == PEFileKinds.Dll ? ".dll" : ".exe");
         private static string _className = "";
     }
 }
