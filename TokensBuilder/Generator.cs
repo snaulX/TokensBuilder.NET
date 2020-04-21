@@ -24,7 +24,7 @@ namespace TokensBuilder
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, isFuncArgs = false,
-            ifDirective = true, needSeparator = false;
+            ifDirective = true, needSeparator = false, needReturn = false;
         public bool? isActual = null; //need three values
         private bool isFuncBody => Context.functionBuilder.IsEmpty;
         private ILGenerator gen => Context.functionBuilder.generator;
@@ -157,11 +157,12 @@ namespace TokensBuilder
                     needSeparator = true;
                 }
             }
-            /*else if (!lastLiterals.IsEmpty())
+            else if (needReturn)
             {
                 if (IsEnd(token))
-                    lastLiterals.Clear();
-            }*/
+                    needReturn = false;
+                ParseToken(token);
+            }
             else
             {
                 switch (token)
@@ -213,10 +214,16 @@ namespace TokensBuilder
                         {
                             if (isFuncArgs)
                             {
-                                Context.classBuilder.methodBuilder.generator.Emit(OpCodes.Call,
-                                    Context.GetTypeByName(lastLiterals[0], usingNamespaces)
-                                    .GetMethod(lastLiterals[1], parameterTypes.ToArray()));
+                                MethodInfo methodInfo = Context.GetTypeByName(lastLiterals[0], usingNamespaces)
+                                    .GetMethod(lastLiterals[1], parameterTypes.ToArray());
+                                gen.Emit(OpCodes.Call, methodInfo);
+                                if (methodInfo.ReturnType != typeof(void))
+                                {
+                                    if (needReturn) needReturn = false;
+                                    else gen.Emit(OpCodes.Pop);
+                                }
                                 parameterTypes.Clear();
+                                lastLiterals.Clear();
                                 isFuncArgs = false;
                             }
                             needEndStatement--;
@@ -276,6 +283,78 @@ namespace TokensBuilder
                     case TokenType.LOOP_OPERATOR:
                         break;
                     case TokenType.OPERATOR:
+                        OperatorType operatorType = reader.operators.Peek();
+                        switch (operatorType)
+                        {
+                            case OperatorType.ADD:
+                                gen.Emit(OpCodes.Add);
+                                break;
+                            case OperatorType.SUB:
+                                gen.Emit(OpCodes.Sub);
+                                break;
+                            case OperatorType.MUL:
+                                gen.Emit(OpCodes.Mul);
+                                break;
+                            case OperatorType.DIV:
+                                gen.Emit(OpCodes.Div);
+                                break;
+                            case OperatorType.MOD:
+                                gen.Emit(OpCodes.Rem);
+                                break;
+                            case OperatorType.EQ:
+                                break;
+                            case OperatorType.NOTEQ:
+                                break;
+                            case OperatorType.NOT:
+                                break;
+                            case OperatorType.AND:
+                                break;
+                            case OperatorType.OR:
+                                break;
+                            case OperatorType.XOR:
+                                break;
+                            case OperatorType.GT:
+                                break;
+                            case OperatorType.LT:
+                                break;
+                            case OperatorType.GTQ:
+                                break;
+                            case OperatorType.LTQ:
+                                break;
+                            case OperatorType.ASSIGN:
+                                needReturn = true;
+                                break;
+                            case OperatorType.ADDASSIGN:
+                                break;
+                            case OperatorType.SUBASSIGN:
+                                break;
+                            case OperatorType.MULASSIGN:
+                                break;
+                            case OperatorType.DIVASSIGN:
+                                break;
+                            case OperatorType.MODASSIGN:
+                                break;
+                            case OperatorType.CONVERTTO:
+                                break;
+                            case OperatorType.INC:
+                                gen.Emit(OpCodes.Ldc_I4_1);
+                                gen.Emit(OpCodes.Add);
+                                break;
+                            case OperatorType.DEC:
+                                gen.Emit(OpCodes.Ldc_I4_1);
+                                gen.Emit(OpCodes.Sub);
+                                break;
+                            case OperatorType.IN:
+                                break;
+                            case OperatorType.GORE:
+                                break;
+                            case OperatorType.LORE:
+                                break;
+                            case OperatorType.RANGE:
+                                break;
+                            case OperatorType.POW:
+                                break;
+                        }
                         break;
                     case TokenType.VALUE:
                         switch (reader.byte_values.Peek())
@@ -285,10 +364,33 @@ namespace TokensBuilder
                                 gen.Emit(OpCodes.Ldnull);
                                 break;
                             case 1:
+                                parameterTypes.Add(typeof(int));
+                                gen.Emit(OpCodes.Ldc_I4, (int)reader.values.Peek());
                                 break;
                             case 2:
                                 parameterTypes.Add(typeof(string));
                                 gen.Emit(OpCodes.Ldstr, (string) reader.values.Peek());
+                                break;
+                            case 3:
+                                parameterTypes.Add(typeof(byte));
+                                gen.Emit(OpCodes.Ldind_I1, (byte)reader.values.Peek());
+                                break;
+                            case 4:
+                                parameterTypes.Add(typeof(bool));
+                                if ((bool)reader.values.Peek()) gen.Emit(OpCodes.Ldc_I4_1);
+                                else gen.Emit(OpCodes.Ldc_I4_0);
+                                break;
+                            case 5:
+                                break;
+                            case 6:
+                                gen.Emit(OpCodes.Ldc_R4, (float) reader.values.Peek());
+                                break;
+                            case 7:
+                                break;
+                            case 8:
+                                break;
+                            case 9:
+                                gen.Emit(OpCodes.Ldc_R8, (float)reader.values.Peek());
                                 break;
                         }
                         break;
@@ -318,6 +420,7 @@ namespace TokensBuilder
                     case TokenType.ELSE:
                         break;
                     case TokenType.RETURN:
+                        needReturn = true;
                         break;
                     case TokenType.ACTUAL:
                         isActual = reader.bool_values.Peek();
@@ -364,7 +467,7 @@ namespace TokensBuilder
                         }
                         break;
                     case TokenType.BREAKPOINT:
-                        Context.functionBuilder.generator.Emit(OpCodes.Break);
+                        gen.Emit(OpCodes.Break);
                         needEnd = true;
                         break;
                     case TokenType.IMPLEMENTS:

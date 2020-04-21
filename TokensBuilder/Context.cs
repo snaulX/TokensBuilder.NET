@@ -20,7 +20,7 @@ namespace TokensBuilder
             get => _classBuilder == null ? mainClass : _classBuilder;
             set => _classBuilder = value;
         }
-        public static FunctionBuilder functionBuilder = null;
+        public static FunctionBuilder functionBuilder => classBuilder.methodBuilder;
         private static Generator gen => TokensBuilder.gen;
         public static MethodInfo entrypoint;
         public static readonly CustomAttributeBuilder entrypointAttr = new CustomAttributeBuilder(
@@ -77,7 +77,6 @@ namespace TokensBuilder
                 {
                     mainClass.SetAttribute(scriptAttr);
                     mainClass.CreateMethod("Main", "void", FuncType.STATIC, SecurityDegree.PRIVATE);
-                    functionBuilder = mainClass.methodBuilder;
                     functionBuilder.SetAttribute(scriptAttr);
                     functionBuilder.SetAttribute(entrypointAttr);
                     assemblyBuilder.SetEntryPoint(functionBuilder.methodBuilder.GetBaseDefinition());
