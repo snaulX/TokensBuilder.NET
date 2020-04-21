@@ -13,6 +13,7 @@ namespace TokensBuilder
         public ConstructorBuilder constructorBuilder = null;
         public FuncType type = FuncType.DEFAULT;
         public Dictionary<string, LocalBuilder> localVariables = new Dictionary<string, LocalBuilder>();
+        public ParameterAttributes parameterAttributes = ParameterAttributes.None;
         public ILGenerator generator => constructorBuilder == null ? methodBuilder.GetILGenerator() : constructorBuilder.GetILGenerator();
         private Generator gen => TokensBuilder.gen;
 

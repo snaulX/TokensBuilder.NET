@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
@@ -11,17 +12,19 @@ namespace TokensBuilder
     {
         public uint line = 0;
         public TokensReader reader;
-        public string currentNamespace = "", wasLiteral = "";
+        public string currentNamespace = "";
+        public List<string> lastLiterals = new List<string>();
         public List<string> usingNamespaces = new List<string>();
         public bool initClass = false, tryDirective = false;
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         public byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         public List<TokensError> errors = new List<TokensError>();
         public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
+        public List<Type> parameterTypes = new List<Type>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, isFuncArgs = false,
-            ifDirective = true;
+            ifDirective = true, needSeparator = false;
         public bool? isActual = null; //need three values
         private bool isFuncBody => Context.functionBuilder.IsEmpty;
         private ILGenerator gen => Context.functionBuilder.generator;
@@ -83,7 +86,6 @@ namespace TokensBuilder
             {
                 tryDirective = false;
             });
-            usingNamespaces.Add(""); //empty namespace
             reader = new TokensReader();
         }
 
@@ -93,12 +95,22 @@ namespace TokensBuilder
             Config.header = (HeaderType)h;
             reader.ReadTokens();
             reader.EndWork();
-            while (reader.tokens.Count > 0) ParseToken(reader.tokens.Peek());
+            while (reader.tokens.Count > 0)
+            {
+                if (tryDirective)
+                {
+                    int errlen = errors.Count;
+                    ParseToken(reader.tokens.Peek());
+                    if (errors.Count > errlen)
+                        errors.RemoveRange(errlen, errors.Count);
+                    //tryDirective = false;
+                }
+                else
+                    ParseToken(reader.tokens.Peek());
+            }
             CheckOnAllClosed();
             foreach (TokensError error in errors)
-            {
                 Console.Error.WriteLine(error);
-            }
         }
 
         private void CheckOnAllClosed()
@@ -109,17 +121,15 @@ namespace TokensBuilder
         }
 
         private bool IsEnd(TokenType token)
-        {
-            return token == TokenType.EXPRESSION_END || (token == TokenType.BLOCK && reader.bool_values[0]);
-        }
+            => token == TokenType.EXPRESSION_END || (token == TokenType.BLOCK && reader.bool_values[0]);
 
         public void ParseToken(TokenType token)
         {
             if (needEnd)
             {
                 if (!IsEnd(token)) errors.Add(new TokensError(line, "End of expression with breakpoint not found"));
-                else if (token == TokenType.BLOCK) needEndBlock++;
                 needEnd = false;
+                ParseToken(token);
             }
             else if (extends)
             {
@@ -130,6 +140,28 @@ namespace TokensBuilder
                 extends = false;
                 needEnd = true;
             }
+            else if (implements)
+            {
+                if (needSeparator)
+                {
+                    if (IsEnd(token))
+                    {
+                        implements = false;
+                        needSeparator = false;
+                        ParseToken(token);
+                    }
+                }
+                else
+                {
+                    Context.classBuilder.Implements(reader.string_values.Peek());
+                    needSeparator = true;
+                }
+            }
+            /*else if (!lastLiterals.IsEmpty())
+            {
+                if (IsEnd(token))
+                    lastLiterals.Clear();
+            }*/
             else
             {
                 switch (token)
@@ -169,8 +201,26 @@ namespace TokensBuilder
                         }
                         break;
                     case TokenType.STATEMENT:
-                        if (reader.bool_values.Peek()) needEndStatement++;
-                        else needEndStatement--;
+                        if (reader.bool_values.Peek())
+                        {
+                            needEndStatement++;
+                            if (!lastLiterals.IsEmpty())
+                            {
+                                isFuncArgs = true;
+                            }
+                        }
+                        else
+                        {
+                            if (isFuncArgs)
+                            {
+                                Context.classBuilder.methodBuilder.generator.Emit(OpCodes.Call,
+                                    Context.GetTypeByName(lastLiterals[0], usingNamespaces)
+                                    .GetMethod(lastLiterals[1], parameterTypes.ToArray()));
+                                parameterTypes.Clear();
+                                isFuncArgs = false;
+                            }
+                            needEndStatement--;
+                        }
                         break;
                     case TokenType.SEQUENCE:
                         if (reader.bool_values.Peek()) needEndSequence++;
@@ -190,26 +240,31 @@ namespace TokensBuilder
                             }
                             isDirective = false;
                         }
-                        else if (extends)
-                        {
-                            Context.classBuilder.Extends(literal);
-                        }
-                        else if (implements)
-                        {
-                            Context.classBuilder.Implements(literal);
-                        }
-                        else if (wasLiteral.IsEmpty())
-                        {
-                            wasLiteral = literal;
-                        }
                         else
                         {
                             //pass
                         }
+                        lastLiterals.Add(literal);
                         break;
                     case TokenType.SEPARATOR:
+                        bool expression = reader.bool_values.Peek();
+                        if (expression)
+                        {
+                            if (lastLiterals.IsEmpty())
+                            {
+                                errors.Add(new InvalidTokenError(line, "Expression separator cannot use without literals before him"));
+                            }
+                        }
+                        else
+                        {
+                            lastLiterals.Clear();
+                        }
                         break;
                     case TokenType.EXPRESSION_END:
+                        if (initClass)
+                            Context.classBuilder.End();
+
+                        initClass = false;
                         needEnd = false;
                         break;
                     case TokenType.LOOP:
@@ -226,11 +281,13 @@ namespace TokensBuilder
                         switch (reader.byte_values.Peek())
                         {
                             case 0:
+                                parameterTypes.Add(typeof(object));
                                 gen.Emit(OpCodes.Ldnull);
                                 break;
                             case 1:
                                 break;
                             case 2:
+                                parameterTypes.Add(typeof(string));
                                 gen.Emit(OpCodes.Ldstr, (string) reader.values.Peek());
                                 break;
                         }
@@ -277,7 +334,34 @@ namespace TokensBuilder
                         usingNamespaces.Add(reader.string_values.Peek());
                         break;
                     case TokenType.INCLUDE:
-                        Assembly.LoadFrom(reader.string_values.Peek());
+                        string path = reader.string_values.Peek();
+                        try
+                        {
+                            Assembly.LoadFrom(path);
+                        }
+                        catch (FileNotFoundException)
+                        {
+                            errors.Add(new IncludeError(line, $"The {path} was not found, or the module" +
+                                " you are trying to load does not indicate a file name extension."));
+                        }
+                        catch (FileLoadException)
+                        {
+                            errors.Add(new IncludeError(line, "Failed to load the file that was found." +
+                                " or The ability to execute code in remote assemblies is disabled."));
+                        }
+                        catch (BadImageFormatException)
+                        {
+                            errors.Add(new IncludeError(line, $"{Path.GetFileName(path)} is not valid assembly"));
+                        }
+                        catch (ArgumentException)
+                        {
+                            errors.Add(new IncludeError(line, $"Name of assembly is empty or not valid"));
+                        }
+                        catch (PathTooLongException)
+                        {
+                            errors.Add(new IncludeError(line, "The assembly name is longer than the maximum length" +
+                                " defined in the system."));
+                        }
                         break;
                     case TokenType.BREAKPOINT:
                         Context.functionBuilder.generator.Emit(OpCodes.Break);

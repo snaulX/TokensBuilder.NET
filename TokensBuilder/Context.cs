@@ -13,7 +13,13 @@ namespace TokensBuilder
         public static AssemblyBuilder assemblyBuilder = null;
         public static AssemblyName assemblyName = new AssemblyName();
         public static ModuleBuilder moduleBuilder = null;
-        public static ClassBuilder classBuilder = null, mainClass = null;
+        private static ClassBuilder _classBuilder = null;
+        public static ClassBuilder mainClass = null;
+        public static ClassBuilder classBuilder
+        {
+            get => _classBuilder == null ? mainClass : _classBuilder;
+            set => _classBuilder = value;
+        }
         public static FunctionBuilder functionBuilder = null;
         private static Generator gen => TokensBuilder.gen;
         public static MethodInfo entrypoint;
@@ -25,9 +31,11 @@ namespace TokensBuilder
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
             Type type = null;
+            type = Type.GetType(name);
+            if (type != null) return type;
             foreach (string nameSpace in namespaces)
             {
-                type = Assembly.GetExecutingAssembly().GetType(nameSpace + name);
+                type = Type.GetType(nameSpace + '.' + name);
                 if (type != null) return type;
             }
             return null;
@@ -54,9 +62,11 @@ namespace TokensBuilder
             //else don't change output type in config
             if (autoAssemblyName)
             {
-                assemblyName = new AssemblyName();
-                assemblyName.Version = Config.version;
-                assemblyName.Name = Config.appName;
+                assemblyName = new AssemblyName
+                {
+                    Version = Config.version,
+                    Name = Config.appName
+                };
             }
             assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
             moduleBuilder = assemblyBuilder.DefineDynamicModule(Config.FileName);
@@ -140,9 +150,6 @@ namespace TokensBuilder
             }
             else
             {
-                mainClass.methodBuilder.generator.Emit(
-                    OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) })
-                    );
                 mainClass.methodBuilder.generator.Emit(OpCodes.Ret);
                 mainClass.End();
             }

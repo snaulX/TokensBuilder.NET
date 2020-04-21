@@ -37,7 +37,10 @@ namespace TokensBuilder
             if (securityDegree == SecurityDegree.PRIVATE) typeAttributes |= TypeAttributes.NotPublic;
             else if (securityDegree == SecurityDegree.PUBLIC) typeAttributes |= TypeAttributes.Public;
 
-            typeBuilder = Context.moduleBuilder.DefineType(nameSpace + name, typeAttributes);
+            if (nameSpace.IsEmpty())
+                typeBuilder = Context.moduleBuilder.DefineType(name, typeAttributes);
+            else
+                typeBuilder = Context.moduleBuilder.DefineType(nameSpace + "." + name, typeAttributes);
         }
 
         public void CreateDefaultConstructorArgs(IEnumerable<TokenType> tokens)
