@@ -11,6 +11,7 @@ namespace TokensBuilder
     {
         public bool IsEmpty => typeBuilder == null;
         public bool? actual = null;
+        public Dictionary<string, FieldBuilder> constants = new Dictionary<string, FieldBuilder>();
         public FunctionBuilder methodBuilder = null;
         public FieldBuilder fieldBuilder = null;
         private TypeBuilder typeBuilder;
@@ -61,7 +62,7 @@ namespace TokensBuilder
                             break;
                         case TokenType.VAR:
                             needVar = false;
-                            fieldBuilder = Context.CreateField();
+                            Context.CreateField();
                             break;
                         case TokenType.ACTUAL:
                             bool _actual = gen.reader.bool_values.Peek();
@@ -83,6 +84,18 @@ namespace TokensBuilder
                     }
                 }
             }
+        }
+
+        public bool TryEndField()
+        {
+            if (fieldBuilder != null)
+            {
+                if (fieldBuilder.IsLiteral)
+                    constants.Add(fieldBuilder.Name, fieldBuilder);
+                fieldBuilder = null;
+                return true;
+            }
+            else return false;
         }
 
         public void CreateMethod(string name, string typeName = "", FuncType type = FuncType.DEFAULT,
@@ -112,8 +125,8 @@ namespace TokensBuilder
 
         public void SetAttribute(CustomAttributeBuilder attr) => typeBuilder.SetCustomAttribute(attr);
 
-        public FieldBuilder DefineField(string name, string typeName, FieldAttributes fieldAttributes) =>
-            typeBuilder.DefineField(name, Context.GetTypeByName(typeName, gen.usingNamespaces), fieldAttributes);
+        internal void DefineField(string name, string typeName, FieldAttributes fieldAttributes) =>
+            fieldBuilder = typeBuilder.DefineField(name, Context.GetTypeByName(typeName, gen.usingNamespaces), fieldAttributes);
 
         public Type End()
         {

@@ -13,9 +13,7 @@ namespace TokensBuilder
         public uint line = 0;
         public TokensReader reader;
         public string currentNamespace = "";
-        public List<string> lastLiterals = new List<string>();
-        public List<string> usingNamespaces = new List<string>();
-        public bool initClass = false, tryDirective = false;
+        public List<string> lastLiterals = new List<string>(), usingNamespaces = new List<string>();
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         public byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         public List<TokensError> errors = new List<TokensError>();
@@ -24,9 +22,20 @@ namespace TokensBuilder
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, isFuncArgs = false,
-            ifDirective = true, needSeparator = false, needReturn = false;
+            ifDirective = true, needSeparator = false, needReturn = false, needAssign = false, tryDirective = false,
+            initClass = false;
         public bool? isActual = null; //need three values
         private bool isFuncBody => Context.functionBuilder.IsEmpty;
+        private bool dontPop 
+        {
+            get => needAssign || needReturn;
+            set
+            {
+                needAssign = value;
+                if (!value && needReturn) gen.Emit(OpCodes.Ret);
+                needReturn = value;
+            }
+        }
         private ILGenerator gen => Context.functionBuilder.generator;
 
         public Generator()
@@ -157,10 +166,10 @@ namespace TokensBuilder
                     needSeparator = true;
                 }
             }
-            else if (needReturn)
+            else if (dontPop)
             {
                 if (IsEnd(token))
-                    needReturn = false;
+                    dontPop = false;
                 ParseToken(token);
             }
             else
@@ -178,6 +187,7 @@ namespace TokensBuilder
                         initClass = true;
                         break;
                     case TokenType.FUNCTION:
+                        Context.CreateMethod();
                         break;
                     case TokenType.VAR:
                         if (isFuncBody)
@@ -219,7 +229,7 @@ namespace TokensBuilder
                                 gen.Emit(OpCodes.Call, methodInfo);
                                 if (methodInfo.ReturnType != typeof(void))
                                 {
-                                    if (needReturn) needReturn = false;
+                                    if (dontPop) dontPop = false;
                                     else gen.Emit(OpCodes.Pop);
                                 }
                                 parameterTypes.Clear();
@@ -322,7 +332,7 @@ namespace TokensBuilder
                             case OperatorType.LTQ:
                                 break;
                             case OperatorType.ASSIGN:
-                                needReturn = true;
+                                needAssign = true;
                                 break;
                             case OperatorType.ADDASSIGN:
                                 break;
@@ -381,16 +391,24 @@ namespace TokensBuilder
                                 else gen.Emit(OpCodes.Ldc_I4_0);
                                 break;
                             case 5:
+                                parameterTypes.Add(typeof(char));
+                                gen.Emit(OpCodes.Ldc_I4, (char)reader.values.Peek());
                                 break;
                             case 6:
+                                parameterTypes.Add(typeof(float));
                                 gen.Emit(OpCodes.Ldc_R4, (float) reader.values.Peek());
                                 break;
                             case 7:
+                                parameterTypes.Add(typeof(short));
+                                gen.Emit(OpCodes.Ldind_I2, (short)reader.values.Peek());
                                 break;
                             case 8:
+                                parameterTypes.Add(typeof(long));
+                                gen.Emit(OpCodes.Ldind_I8, (long)reader.values.Peek());
                                 break;
                             case 9:
-                                gen.Emit(OpCodes.Ldc_R8, (float)reader.values.Peek());
+                                parameterTypes.Add(typeof(double));
+                                gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Peek());
                                 break;
                         }
                         break;

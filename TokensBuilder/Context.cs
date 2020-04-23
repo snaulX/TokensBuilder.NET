@@ -22,11 +22,11 @@ namespace TokensBuilder
         }
         public static FunctionBuilder functionBuilder => classBuilder.methodBuilder;
         private static Generator gen => TokensBuilder.gen;
-        public static MethodInfo entrypoint;
         public static readonly CustomAttributeBuilder entrypointAttr = new CustomAttributeBuilder(
                         typeof(EntrypointAttribute).GetConstructor(Type.EmptyTypes), new object[] { }),
             scriptAttr = new CustomAttributeBuilder(
                         typeof(ScriptAttribute).GetConstructor(Type.EmptyTypes), new object[] { });
+        public static Dictionary<string, object> constants = new Dictionary<string, object>();
 
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
@@ -84,8 +84,9 @@ namespace TokensBuilder
             }
         }
 
-        public static FieldBuilder CreateField()
+        public static void CreateField()
         {
+            string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
             FieldAttributes fieldAttributes;
             SecurityDegree security = gen.reader.securities.Peek();
             if (security == SecurityDegree.PUBLIC) fieldAttributes = FieldAttributes.Public;
@@ -96,8 +97,16 @@ namespace TokensBuilder
             if (varType == VarType.CONST) fieldAttributes |= FieldAttributes.Literal;
             else if (varType == VarType.FINAL) fieldAttributes |= FieldAttributes.InitOnly;
             else if (varType == VarType.STATIC) fieldAttributes |= FieldAttributes.Static;
-            string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
-            return classBuilder.DefineField(name, typeName, fieldAttributes);
+            classBuilder.DefineField(name, typeName, fieldAttributes);
+        }
+
+        public static void CreateMethod()
+        {
+            string name = gen.reader.string_values.Peek(), typeName = gen.reader.string_values.Peek();
+            FuncType funcType = gen.reader.function_types.Peek();
+            SecurityDegree security = gen.reader.securities.Peek();
+            classBuilder.CreateMethod(name, typeName, funcType, security);
+            TokenType token = gen.reader.tokens.Peek();
         }
 
         public static CustomAttributeBuilder FindAttribute(IEnumerable<string> namespaces)
