@@ -20,15 +20,29 @@ namespace TokensBuilder
         public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
         public List<Type> parameterTypes = new List<Type>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
+        private OperatorType? needOperator = null;
         //flags
-        private bool isDirective = false, needEnd = false, extends = false, implements = false, isFuncArgs = false,
-            ifDirective = true, needSeparator = false, needReturn = false, needAssign = false, tryDirective = false,
-            initClass = false;
+        private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
+            needSeparator = false, needReturn = false, needAssign = false, tryDirective = false, initClass = false, 
+            isParams = false, isFuncAlias = false, isTypeAlias = false, isCtor = false, isOperator = false;
+        private int curLiteralIndex = 0, funcArgs = 0;
+        private TokenType prev;
+        private string curLiteral => lastLiterals[curLiteralIndex];
         public bool? isActual = null; //need three values
-        private bool isFuncBody => Context.functionBuilder.IsEmpty;
+        private bool isFuncBody => !Context.functionBuilder.IsEmpty;
+        private bool isFuncArgs
+        {
+            get => funcArgs > 0;
+            set 
+            {
+                if (value) funcArgs++;
+                else funcArgs--;
+                Console.WriteLine(funcArgs);
+            }
+        }
         private bool dontPop 
         {
-            get => needAssign || needReturn;
+            get => needAssign || needReturn || isFuncArgs;
             set
             {
                 needAssign = value;
@@ -115,7 +129,11 @@ namespace TokensBuilder
                     //tryDirective = false;
                 }
                 else
-                    ParseToken(reader.tokens.Peek());
+                {
+                    TokenType tt = reader.tokens.Peek();
+                    ParseToken(tt);
+                    prev = tt;
+                }
             }
             CheckOnAllClosed();
             foreach (TokensError error in errors)
@@ -166,10 +184,13 @@ namespace TokensBuilder
                     needSeparator = true;
                 }
             }
-            else if (dontPop)
+            else if (needReturn)
             {
                 if (IsEnd(token))
-                    dontPop = false;
+                {
+                    gen.Emit(OpCodes.Ret);
+                    needReturn = false;
+                }
                 ParseToken(token);
             }
             else
@@ -181,7 +202,7 @@ namespace TokensBuilder
                         line++;
                         break;
                     case TokenType.CLASS:
-                        Context.classBuilder = 
+                        Context.classBuilder =
                             new ClassBuilder(reader.string_values.Peek(), currentNamespace,
                             reader.class_types.Peek(), reader.securities.Peek());
                         initClass = true;
@@ -192,7 +213,8 @@ namespace TokensBuilder
                     case TokenType.VAR:
                         if (isFuncBody)
                         {
-                            Context.functionBuilder.DeclareLocal(reader.string_values.Peek(), reader.string_values.Peek());
+                            //Context.functionBuilder.DeclareLocal(reader.string_values.Peek(), reader.string_values.Peek());
+                            Context.CreateField();
                         }
                         break;
                     case TokenType.BLOCK:
@@ -204,7 +226,12 @@ namespace TokensBuilder
                         }
                         else
                         {
-                            if (!Context.classBuilder.IsEmpty) 
+                            if (isFuncBody)
+                            {
+                                gen.Emit(OpCodes.Ret);
+                                Context.classBuilder.methodBuilder = null;
+                            }
+                            else if (!Context.classBuilder.IsEmpty)
                             {
                                 Context.classBuilder.End();
                             }
@@ -215,7 +242,7 @@ namespace TokensBuilder
                         if (reader.bool_values.Peek())
                         {
                             needEndStatement++;
-                            if (!lastLiterals.IsEmpty())
+                            if (prev == TokenType.LITERAL)
                             {
                                 isFuncArgs = true;
                             }
@@ -224,17 +251,47 @@ namespace TokensBuilder
                         {
                             if (isFuncArgs)
                             {
-                                MethodInfo methodInfo = Context.GetTypeByName(lastLiterals[0], usingNamespaces)
-                                    .GetMethod(lastLiterals[1], parameterTypes.ToArray());
-                                gen.Emit(OpCodes.Call, methodInfo);
+                                Type parentType = Context.GetTypeByName(curLiteral, usingNamespaces);
+                                MethodInfo methodInfo;
+                                try
+                                {
+                                    if (parentType == null)
+                                    {
+                                        errors.Add(new TypeNotFoundError(line, 
+                                            $"Type by name {curLiteral} not found for call him static method"));
+                                        parameterTypes.Clear();
+                                        curLiteralIndex++;
+                                        return;
+                                    }
+                                    curLiteralIndex++;
+                                    methodInfo = parentType.GetMethod(curLiteral, parameterTypes.ToArray());
+                                    gen.Emit(OpCodes.Call, methodInfo);
+                                }
+                                catch (SystemException) //if methodInfo == null
+                                {
+                                    try 
+                                    {
+                                        if (parentType.GetMethod(curLiteral) == null)
+                                            errors.Add(new InvalidMethodError(line, $"This method not found of {parentType.Name}")); 
+                                    }
+                                    catch (AmbiguousMatchException) 
+                                    {
+                                        errors.Add(new InvalidMethodError(line, $"Method with name {curLiteral}" +
+                                            $" haven`t arguments with getted types: {string.Join(", ", parameterTypes)}"));
+                                    }
+                                    parameterTypes.Clear();
+                                    curLiteralIndex++;
+                                    isFuncArgs = false;
+                                    return;
+                                }
+                                parameterTypes.Clear();
+                                curLiteralIndex++;
+                                isFuncArgs = false;
                                 if (methodInfo.ReturnType != typeof(void))
                                 {
                                     if (dontPop) dontPop = false;
                                     else gen.Emit(OpCodes.Pop);
                                 }
-                                parameterTypes.Clear();
-                                lastLiterals.Clear();
-                                isFuncArgs = false;
                             }
                             needEndStatement--;
                         }
@@ -281,8 +338,12 @@ namespace TokensBuilder
                         if (initClass)
                             Context.classBuilder.End();
 
+                        lastLiterals.Clear();
+                        curLiteralIndex = 0;
                         initClass = false;
                         needEnd = false;
+                        needReturn = false;
+                        needAssign = false;
                         break;
                     case TokenType.LOOP:
                         break;
@@ -379,7 +440,7 @@ namespace TokensBuilder
                                 break;
                             case 2:
                                 parameterTypes.Add(typeof(string));
-                                gen.Emit(OpCodes.Ldstr, (string) reader.values.Peek());
+                                gen.Emit(OpCodes.Ldstr, (string)reader.values.Peek());
                                 break;
                             case 3:
                                 parameterTypes.Add(typeof(byte));
@@ -396,7 +457,7 @@ namespace TokensBuilder
                                 break;
                             case 6:
                                 parameterTypes.Add(typeof(float));
-                                gen.Emit(OpCodes.Ldc_R4, (float) reader.values.Peek());
+                                gen.Emit(OpCodes.Ldc_R4, (float)reader.values.Peek());
                                 break;
                             case 7:
                                 parameterTypes.Add(typeof(short));

@@ -98,7 +98,7 @@ namespace TokensBuilder
             else return false;
         }
 
-        public void CreateMethod(string name, string typeName = "", FuncType type = FuncType.DEFAULT,
+        public FunctionBuilder CreateMethod(string name, string typeName = "", FuncType type = FuncType.DEFAULT,
             SecurityDegree security = SecurityDegree.PUBLIC)
         {
             MethodAttributes attributes;
@@ -116,6 +116,7 @@ namespace TokensBuilder
             else if (type == FuncType.VIRTUAL) attributes |= MethodAttributes.Virtual;
 
             methodBuilder = new FunctionBuilder(typeBuilder.DefineMethod(name, attributes, CallingConventions.Standard));
+            return methodBuilder;
         }
 
         public void Extends(string superTypeName) => typeBuilder.SetParent(Context.GetTypeByName(superTypeName, gen.usingNamespaces));

@@ -17,7 +17,7 @@ namespace TokensBuilder
         public static ClassBuilder mainClass = null;
         public static ClassBuilder classBuilder
         {
-            get => _classBuilder == null ? mainClass : _classBuilder;
+            get => _classBuilder ?? mainClass;
             set => _classBuilder = value;
         }
         public static FunctionBuilder functionBuilder => classBuilder.methodBuilder;
@@ -27,6 +27,17 @@ namespace TokensBuilder
             scriptAttr = new CustomAttributeBuilder(
                         typeof(ScriptAttribute).GetConstructor(Type.EmptyTypes), new object[] { });
         public static Dictionary<string, object> constants = new Dictionary<string, object>();
+        public static List<MethodInfo> scriptFunctions = new List<MethodInfo>();
+
+        public static MethodInfo FindScriptFunction(string name)
+        {
+            foreach (MethodInfo func in scriptFunctions)
+            {
+                if (func.Name == name)
+                    return func;
+            }
+            return null;
+        }
 
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
@@ -87,6 +98,8 @@ namespace TokensBuilder
         public static void CreateField()
         {
             string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
+            Console.WriteLine(typeName);
+            Console.WriteLine(name);
             FieldAttributes fieldAttributes;
             SecurityDegree security = gen.reader.securities.Peek();
             if (security == SecurityDegree.PUBLIC) fieldAttributes = FieldAttributes.Public;
@@ -94,19 +107,19 @@ namespace TokensBuilder
             else if (security == SecurityDegree.INTERNAL) fieldAttributes = FieldAttributes.Assembly;
             else fieldAttributes = FieldAttributes.Family;
             VarType varType = gen.reader.var_types.Peek();
-            if (varType == VarType.CONST) fieldAttributes |= FieldAttributes.Literal;
+            if (varType == VarType.CONST) fieldAttributes |= FieldAttributes.Literal | FieldAttributes.HasDefault | FieldAttributes.Static;
             else if (varType == VarType.FINAL) fieldAttributes |= FieldAttributes.InitOnly;
             else if (varType == VarType.STATIC) fieldAttributes |= FieldAttributes.Static;
             classBuilder.DefineField(name, typeName, fieldAttributes);
         }
 
-        public static void CreateMethod()
+        public static FuncType CreateMethod()
         {
             string name = gen.reader.string_values.Peek(), typeName = gen.reader.string_values.Peek();
             FuncType funcType = gen.reader.function_types.Peek();
             SecurityDegree security = gen.reader.securities.Peek();
             classBuilder.CreateMethod(name, typeName, funcType, security);
-            TokenType token = gen.reader.tokens.Peek();
+            return funcType;
         }
 
         public static CustomAttributeBuilder FindAttribute(IEnumerable<string> namespaces)
