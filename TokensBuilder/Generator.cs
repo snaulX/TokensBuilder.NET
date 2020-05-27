@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
@@ -10,10 +11,15 @@ namespace TokensBuilder
 {
     public sealed class Generator
     {
+        //lastLiterals - all literals that was readed
+        //curLiteralIndex - index of peeked (need) literal
+        //funcArgs - level of argments of method
+        //lengthLiterals - список количеств литералов, которые идут через сепаратор (точку) подряд
+
         public uint line = 0;
         public TokensReader reader;
         public string currentNamespace = "";
-        public List<string> lastLiterals = new List<string>(), usingNamespaces = new List<string>();
+        public List<string> literals = new List<string>(), usingNamespaces = new List<string>();
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         public byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
         public List<TokensError> errors = new List<TokensError>();
@@ -27,19 +33,11 @@ namespace TokensBuilder
             isParams = false, isFuncAlias = false, isTypeAlias = false, isCtor = false, isOperator = false;
         private int curLiteralIndex = 0, funcArgs = 0;
         private TokenType prev;
-        private string curLiteral => lastLiterals[curLiteralIndex];
+        private Stack<int> lengthLiterals = new Stack<int>();
+        private string curLiteral => literals[curLiteralIndex];
         public bool? isActual = null; //need three values
         private bool isFuncBody => !Context.functionBuilder.IsEmpty;
-        private bool isFuncArgs
-        {
-            get => funcArgs > 0;
-            set 
-            {
-                if (value) funcArgs++;
-                else funcArgs--;
-                Console.WriteLine(funcArgs);
-            }
-        }
+        private bool isFuncArgs => funcArgs > 0;
         private bool dontPop 
         {
             get => needAssign || needReturn || isFuncArgs;
@@ -50,7 +48,31 @@ namespace TokensBuilder
                 needReturn = value;
             }
         }
+        /// <summary>
+        /// Length of all previous literals. Faster then lengthLiterals.Sum() on ~13 ms
+        /// </summary>
+        private int sumLength
+        {
+            get 
+            {
+                int sum = 0;
+                foreach (int num in lengthLiterals)
+                {
+                    sum += num;
+                }
+                return sum;
+            }
+        }
         private ILGenerator gen => Context.functionBuilder.generator;
+
+        private void RemoveLastLiterals()
+        {
+            //llen - length of literals, len - last length of literals
+            int llen = literals.Count, len = lengthLiterals.Pop(); //remove last length of literals
+            curLiteralIndex = llen - len; //ставим индекс на объект перед которым всё должно быть удалено
+            literals.RemoveRange(curLiteralIndex, len); //и всё удаляем перед этим индексом
+        }
+        private void AddLengthLiteral() => lengthLiterals.Push(literals.Count - sumLength);
 
         public Generator()
         {
@@ -68,6 +90,7 @@ namespace TokensBuilder
                         errors.Add(new InvalidHeaderError(line, Config.header, "extends directive can be only with class header"));
                     }
                 }
+
                 else
                 {
                     errors.Add(new InvalidTokenError(line, curToken));
@@ -244,13 +267,16 @@ namespace TokensBuilder
                             needEndStatement++;
                             if (prev == TokenType.LITERAL)
                             {
-                                isFuncArgs = true;
+                                funcArgs++;
+                                AddLengthLiteral();
                             }
                         }
                         else
                         {
+                            needEndStatement--;
                             if (isFuncArgs)
                             {
+                                funcArgs--;
                                 Type parentType = Context.GetTypeByName(curLiteral, usingNamespaces);
                                 MethodInfo methodInfo;
                                 try
@@ -267,7 +293,7 @@ namespace TokensBuilder
                                     methodInfo = parentType.GetMethod(curLiteral, parameterTypes.ToArray());
                                     gen.Emit(OpCodes.Call, methodInfo);
                                 }
-                                catch (SystemException) //if methodInfo == null
+                                catch //if methodInfo == null
                                 {
                                     try 
                                     {
@@ -280,20 +306,17 @@ namespace TokensBuilder
                                             $" haven`t arguments with getted types: {string.Join(", ", parameterTypes)}"));
                                     }
                                     parameterTypes.Clear();
-                                    curLiteralIndex++;
-                                    isFuncArgs = false;
+                                    RemoveLastLiterals();
                                     return;
                                 }
                                 parameterTypes.Clear();
-                                curLiteralIndex++;
-                                isFuncArgs = false;
+                                RemoveLastLiterals();
                                 if (methodInfo.ReturnType != typeof(void))
                                 {
                                     if (dontPop) dontPop = false;
                                     else gen.Emit(OpCodes.Pop);
                                 }
                             }
-                            needEndStatement--;
                         }
                         break;
                     case TokenType.SEQUENCE:
@@ -314,31 +337,27 @@ namespace TokensBuilder
                             }
                             isDirective = false;
                         }
-                        else
-                        {
-                            //pass
-                        }
-                        lastLiterals.Add(literal);
+                        literals.Add(literal);
                         break;
                     case TokenType.SEPARATOR:
                         bool expression = reader.bool_values.Peek();
                         if (expression)
                         {
-                            if (lastLiterals.IsEmpty())
+                            if (literals.IsEmpty())
                             {
                                 errors.Add(new InvalidTokenError(line, "Expression separator cannot use without literals before him"));
                             }
                         }
                         else
                         {
-                            lastLiterals.Clear();
+                            literals.Clear();
                         }
                         break;
                     case TokenType.EXPRESSION_END:
                         if (initClass)
                             Context.classBuilder.End();
 
-                        lastLiterals.Clear();
+                        literals.Clear();
                         curLiteralIndex = 0;
                         initClass = false;
                         needEnd = false;
