@@ -22,11 +22,13 @@ namespace TokensBuilder
         public List<string> literals = new List<string>(), usingNamespaces = new List<string>();
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         public byte needEndStatement = 0, needEndSequence = 0, needEndBlock = 0;
+        public bool? isActual = null; //need three values
         public List<TokensError> errors = new List<TokensError>();
         public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
         public List<Type> parameterTypes = new List<Type>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         private OperatorType? needOperator = null;
+
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
             needSeparator = false, needReturn = false, needAssign = false, tryDirective = false, initClass = false, 
@@ -34,8 +36,16 @@ namespace TokensBuilder
         private int curLiteralIndex = 0, funcArgs = 0;
         private TokenType prev;
         private Stack<int> lengthLiterals = new Stack<int>();
-        private string curLiteral => literals[curLiteralIndex];
-        public bool? isActual = null; //need three values
+
+        //properties
+        private string curLiteral
+        {
+            get
+            {
+                if (curLiteralIndex > 0) return literals[curLiteralIndex - 1];
+                else return literals[curLiteralIndex];
+            }
+        }
         private bool isFuncBody => !Context.functionBuilder.IsEmpty;
         private bool isFuncArgs => funcArgs > 0;
         private bool dontPop 
@@ -44,7 +54,7 @@ namespace TokensBuilder
             set
             {
                 needAssign = value;
-                if (!value && needReturn) gen.Emit(OpCodes.Ret);
+                //if (!value && needReturn) gen.Emit(OpCodes.Ret);
                 needReturn = value;
             }
         }
@@ -65,12 +75,15 @@ namespace TokensBuilder
         }
         private ILGenerator gen => Context.functionBuilder.generator;
 
+        //methods
         private void RemoveLastLiterals()
         {
             //llen - length of literals, len - last length of literals
             int llen = literals.Count, len = lengthLiterals.Pop(); //remove last length of literals
             curLiteralIndex = llen - len; //ставим индекс на объект перед которым всё должно быть удалено
-            literals.RemoveRange(curLiteralIndex, len); //и всё удаляем перед этим индексом
+            literals.RemoveRange(curLiteralIndex, llen - curLiteralIndex); //и всё удаляем перед этим индексом
+            if (curLiteralIndex <= 0) curLiteralIndex = 0;
+            else curLiteralIndex--;
         }
         private void AddLengthLiteral() => lengthLiterals.Push(literals.Count - sumLength);
 
@@ -163,6 +176,7 @@ namespace TokensBuilder
                 Console.Error.WriteLine(error);
         }
 
+        #region Private methods for parsing of tokens
         private void CheckOnAllClosed()
         {
             if (needEndBlock > 0) errors.Add(new NeedEndError(line, $"Need end of {needEndBlock} blocks"));
@@ -172,6 +186,67 @@ namespace TokensBuilder
 
         private bool IsEnd(TokenType token)
             => token == TokenType.EXPRESSION_END || (token == TokenType.BLOCK && reader.bool_values[0]);
+
+        private void ParseStatement()
+        {
+            if (reader.bool_values.Peek())
+            {
+                needEndStatement++;
+                if (prev == TokenType.LITERAL)
+                {
+                    funcArgs++;
+                    AddLengthLiteral();
+                }
+            }
+            else
+            {
+                needEndStatement--;
+                if (isFuncArgs)
+                {
+                    funcArgs--;
+                    Type parentType = Context.GetTypeByName(curLiteral, usingNamespaces);
+                    MethodInfo methodInfo;
+                    try
+                    {
+                        if (parentType == null)
+                        {
+                            errors.Add(new TypeNotFoundError(line,
+                                $"Type by name {curLiteral} not found for call him static method"));
+                            parameterTypes.Clear();
+                            curLiteralIndex++;
+                            return;
+                        }
+                        curLiteralIndex++;
+                        methodInfo = parentType.GetMethod(curLiteral, parameterTypes.ToArray());
+                        gen.Emit(OpCodes.Call, methodInfo);
+                    }
+                    catch //if methodInfo == null
+                    {
+                        try
+                        {
+                            if (parentType.GetMethod(curLiteral) == null)
+                                errors.Add(new InvalidMethodError(line, $"This method not found of {parentType.Name}"));
+                        }
+                        catch (AmbiguousMatchException)
+                        {
+                            errors.Add(new InvalidMethodError(line, $"Method with name {curLiteral}" +
+                                $" haven`t arguments with getted types: {string.Join(", ", parameterTypes)}"));
+                        }
+                        parameterTypes.Clear();
+                        RemoveLastLiterals();
+                        return;
+                    }
+                    parameterTypes.Clear();
+                    RemoveLastLiterals();
+                    if (methodInfo.ReturnType != typeof(void))
+                    {
+                        if (dontPop) dontPop = false;
+                        else gen.Emit(OpCodes.Pop);
+                    }
+                }
+            }
+        }
+        #endregion
 
         public void ParseToken(TokenType token)
         {
@@ -262,62 +337,7 @@ namespace TokensBuilder
                         }
                         break;
                     case TokenType.STATEMENT:
-                        if (reader.bool_values.Peek())
-                        {
-                            needEndStatement++;
-                            if (prev == TokenType.LITERAL)
-                            {
-                                funcArgs++;
-                                AddLengthLiteral();
-                            }
-                        }
-                        else
-                        {
-                            needEndStatement--;
-                            if (isFuncArgs)
-                            {
-                                funcArgs--;
-                                Type parentType = Context.GetTypeByName(curLiteral, usingNamespaces);
-                                MethodInfo methodInfo;
-                                try
-                                {
-                                    if (parentType == null)
-                                    {
-                                        errors.Add(new TypeNotFoundError(line, 
-                                            $"Type by name {curLiteral} not found for call him static method"));
-                                        parameterTypes.Clear();
-                                        curLiteralIndex++;
-                                        return;
-                                    }
-                                    curLiteralIndex++;
-                                    methodInfo = parentType.GetMethod(curLiteral, parameterTypes.ToArray());
-                                    gen.Emit(OpCodes.Call, methodInfo);
-                                }
-                                catch //if methodInfo == null
-                                {
-                                    try 
-                                    {
-                                        if (parentType.GetMethod(curLiteral) == null)
-                                            errors.Add(new InvalidMethodError(line, $"This method not found of {parentType.Name}")); 
-                                    }
-                                    catch (AmbiguousMatchException) 
-                                    {
-                                        errors.Add(new InvalidMethodError(line, $"Method with name {curLiteral}" +
-                                            $" haven`t arguments with getted types: {string.Join(", ", parameterTypes)}"));
-                                    }
-                                    parameterTypes.Clear();
-                                    RemoveLastLiterals();
-                                    return;
-                                }
-                                parameterTypes.Clear();
-                                RemoveLastLiterals();
-                                if (methodInfo.ReturnType != typeof(void))
-                                {
-                                    if (dontPop) dontPop = false;
-                                    else gen.Emit(OpCodes.Pop);
-                                }
-                            }
-                        }
+                        ParseStatement();
                         break;
                     case TokenType.SEQUENCE:
                         if (reader.bool_values.Peek()) needEndSequence++;
