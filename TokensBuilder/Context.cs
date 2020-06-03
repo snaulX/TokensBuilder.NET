@@ -39,6 +39,8 @@ namespace TokensBuilder
             return null;
         }
 
+        public static Type GetTypeByName(string name) => GetTypeByName(name, gen.usingNamespaces);
+
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
         {
             Type type = null;

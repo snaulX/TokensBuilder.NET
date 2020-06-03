@@ -119,7 +119,7 @@ namespace TokensBuilder
             return methodBuilder;
         }
 
-        public void Extends(string superTypeName) => typeBuilder.SetParent(Context.GetTypeByName(superTypeName, gen.usingNamespaces));
+        public void Extends(string superTypeName) => typeBuilder.SetParent(Context.GetTypeByName(superTypeName));
 
         public void Implements(string interfaceName) => typeBuilder.AddInterfaceImplementation(
             Context.GetInterfaceByName(interfaceName, gen.usingNamespaces));
@@ -127,7 +127,7 @@ namespace TokensBuilder
         public void SetAttribute(CustomAttributeBuilder attr) => typeBuilder.SetCustomAttribute(attr);
 
         internal void DefineField(string name, string typeName, FieldAttributes fieldAttributes) =>
-            fieldBuilder = typeBuilder.DefineField(name, Context.GetTypeByName(typeName, gen.usingNamespaces), fieldAttributes);
+            fieldBuilder = typeBuilder.DefineField(name, Context.GetTypeByName(typeName), fieldAttributes);
 
         public Type End()
         {

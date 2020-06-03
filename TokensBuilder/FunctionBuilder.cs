@@ -18,7 +18,7 @@ namespace TokensBuilder
         private Generator gen => TokensBuilder.gen;
 
         public void DeclareLocal(string name, string typeName) => 
-            localVariables.Add(name, generator.DeclareLocal(Context.GetTypeByName(typeName, gen.usingNamespaces)));
+            localVariables.Add(name, generator.DeclareLocal(Context.GetTypeByName(typeName)));
 
         public FunctionBuilder(MethodBuilder methodBuilder)
         {

@@ -25,24 +25,25 @@ namespace TokensBuilder
         public bool? isActual = null; //need three values
         public List<TokensError> errors = new List<TokensError>();
         public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
-        public List<Type> parameterTypes = new List<Type>();
+        public Stack<List<Type>> parameterTypes = new Stack<List<Type>>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
-        private OperatorType? needOperator = null;
 
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
             needSeparator = false, needReturn = false, needAssign = false, tryDirective = false, initClass = false, 
-            isParams = false, isFuncAlias = false, isTypeAlias = false, isCtor = false, isOperator = false;
+            isParams = false, isFuncAlias = false, isTypeAlias = false, isCtor = false;
         private int curLiteralIndex = 0, funcArgs = 0;
         private TokenType prev;
         private Stack<int> lengthLiterals = new Stack<int>();
+        private OperatorType? needOperator = null;
+        private object value1, value2;
 
         //properties
         private string curLiteral
         {
             get
             {
-                if (curLiteralIndex > 0) return literals[curLiteralIndex - 1];
+                if (curLiteralIndex >= lengthLiterals.Peek() && curLiteralIndex > 0) return literals[curLiteralIndex - 1];
                 else return literals[curLiteralIndex];
             }
         }
@@ -196,6 +197,7 @@ namespace TokensBuilder
                 {
                     funcArgs++;
                     AddLengthLiteral();
+                    parameterTypes.Push(new List<Type>());
                 }
             }
             else
@@ -203,48 +205,153 @@ namespace TokensBuilder
                 needEndStatement--;
                 if (isFuncArgs)
                 {
-                    funcArgs--;
-                    Type parentType = Context.GetTypeByName(curLiteral, usingNamespaces);
-                    MethodInfo methodInfo;
-                    try
+                    EndParseArgsOfCallingMethod();
+                }
+            }
+        }
+
+        private void ParseOperator()
+        {
+            switch (needOperator)
+            {
+                case OperatorType.ADD:
+                    break;
+                case OperatorType.SUB:
+                    break;
+                case OperatorType.MUL:
+                    break;
+                case OperatorType.DIV:
+                    break;
+                case OperatorType.MOD:
+                    break;
+                case OperatorType.EQ:
+                    break;
+                case OperatorType.NOTEQ:
+                    break;
+                case OperatorType.NOT:
+                    break;
+                case OperatorType.AND:
+                    break;
+                case OperatorType.OR:
+                    break;
+                case OperatorType.XOR:
+                    break;
+                case OperatorType.GT:
+                    break;
+                case OperatorType.LT:
+                    break;
+                case OperatorType.GTQ:
+                    break;
+                case OperatorType.LTQ:
+                    break;
+                case OperatorType.ASSIGN:
+                    break;
+                case OperatorType.ADDASSIGN:
+                    break;
+                case OperatorType.SUBASSIGN:
+                    break;
+                case OperatorType.MULASSIGN:
+                    break;
+                case OperatorType.DIVASSIGN:
+                    break;
+                case OperatorType.MODASSIGN:
+                    break;
+                case OperatorType.CONVERTTO:
+                    break;
+                case OperatorType.INC:
+                    break;
+                case OperatorType.DEC:
+                    break;
+                case OperatorType.IN:
+                    break;
+                case OperatorType.GORE:
+                    break;
+                case OperatorType.LORE:
+                    break;
+                case OperatorType.RANGE:
+                    break;
+                case OperatorType.POW:
+                    break;
+            }
+        }
+
+        private void Include(string path)
+        {
+            try
+            {
+                Assembly.LoadFrom(path);
+            }
+            catch (FileNotFoundException)
+            {
+                errors.Add(new IncludeError(line, $"The {path} was not found, or the module" +
+                    " you are trying to load does not indicate a file name extension."));
+            }
+            catch (FileLoadException)
+            {
+                errors.Add(new IncludeError(line, "Failed to load the file that was found." +
+                    " or The ability to execute code in remote assemblies is disabled."));
+            }
+            catch (BadImageFormatException)
+            {
+                errors.Add(new IncludeError(line, $"{Path.GetFileName(path)} is not valid assembly"));
+            }
+            catch (ArgumentException)
+            {
+                errors.Add(new IncludeError(line, $"Name of assembly is empty or not valid"));
+            }
+            catch (PathTooLongException)
+            {
+                errors.Add(new IncludeError(line, "The assembly name is longer than the maximum length" +
+                    " defined in the system."));
+            }
+        }
+
+        private void EndParseArgsOfCallingMethod()
+        {
+            funcArgs--;
+            int lengthCall = lengthLiterals.Peek(), len = literals.Count;
+            string methName = literals.Last(), typeName = string.Join(".", 
+                literals.GetRange(len - lengthCall, lengthCall - 1));
+            Type callingType = Context.GetTypeByName(typeName);
+            MethodInfo callingMethod;
+            try
+            {
+                if (callingType == null)
+                {
+                    errors.Add(new TypeNotFoundError(line, $"Type by name {typeName} not found"));
+                }
+                else
+                {
+                    callingMethod = callingType.GetMethod(methName, parameterTypes.Peek().ToArray());
+                    gen.Emit(OpCodes.Call, callingMethod);
+                    parameterTypes.Pop();
+                    if (!dontPop && callingMethod.ReturnType != typeof(void))
                     {
-                        if (parentType == null)
-                        {
-                            errors.Add(new TypeNotFoundError(line,
-                                $"Type by name {curLiteral} not found for call him static method"));
-                            parameterTypes.Clear();
-                            curLiteralIndex++;
-                            return;
-                        }
-                        curLiteralIndex++;
-                        methodInfo = parentType.GetMethod(curLiteral, parameterTypes.ToArray());
-                        gen.Emit(OpCodes.Call, methodInfo);
+                        gen.Emit(OpCodes.Pop);
                     }
-                    catch //if methodInfo == null
+                    else
                     {
-                        try
-                        {
-                            if (parentType.GetMethod(curLiteral) == null)
-                                errors.Add(new InvalidMethodError(line, $"This method not found of {parentType.Name}"));
-                        }
-                        catch (AmbiguousMatchException)
-                        {
-                            errors.Add(new InvalidMethodError(line, $"Method with name {curLiteral}" +
-                                $" haven`t arguments with getted types: {string.Join(", ", parameterTypes)}"));
-                        }
-                        parameterTypes.Clear();
-                        RemoveLastLiterals();
-                        return;
-                    }
-                    parameterTypes.Clear();
-                    RemoveLastLiterals();
-                    if (methodInfo.ReturnType != typeof(void))
-                    {
-                        if (dontPop) dontPop = false;
-                        else gen.Emit(OpCodes.Pop);
+                        if (isFuncArgs) parameterTypes.Peek().Add(callingMethod.ReturnType);
+                        dontPop = false;
                     }
                 }
             }
+            catch
+            {
+                try
+                {
+                    if (callingType.GetMethod(methName) == null)
+                        errors.Add(new InvalidMethodError(line, $"Method by name {methName}" +
+                            $" not found of class {typeName}"));
+                }
+                catch (AmbiguousMatchException)
+                {
+                    errors.Add(new InvalidMethodError(line, $"Invalid types of parameters " +
+                        $"{string.Join(", ", parameterTypes)} in method {typeName}.{methName}"));
+                }
+                parameterTypes.Pop();
+            }
+            RemoveLastLiterals();
         }
         #endregion
 
@@ -393,121 +500,50 @@ namespace TokensBuilder
                     case TokenType.LOOP_OPERATOR:
                         break;
                     case TokenType.OPERATOR:
-                        OperatorType operatorType = reader.operators.Peek();
-                        switch (operatorType)
-                        {
-                            case OperatorType.ADD:
-                                gen.Emit(OpCodes.Add);
-                                break;
-                            case OperatorType.SUB:
-                                gen.Emit(OpCodes.Sub);
-                                break;
-                            case OperatorType.MUL:
-                                gen.Emit(OpCodes.Mul);
-                                break;
-                            case OperatorType.DIV:
-                                gen.Emit(OpCodes.Div);
-                                break;
-                            case OperatorType.MOD:
-                                gen.Emit(OpCodes.Rem);
-                                break;
-                            case OperatorType.EQ:
-                                break;
-                            case OperatorType.NOTEQ:
-                                break;
-                            case OperatorType.NOT:
-                                break;
-                            case OperatorType.AND:
-                                break;
-                            case OperatorType.OR:
-                                break;
-                            case OperatorType.XOR:
-                                break;
-                            case OperatorType.GT:
-                                break;
-                            case OperatorType.LT:
-                                break;
-                            case OperatorType.GTQ:
-                                break;
-                            case OperatorType.LTQ:
-                                break;
-                            case OperatorType.ASSIGN:
-                                needAssign = true;
-                                break;
-                            case OperatorType.ADDASSIGN:
-                                break;
-                            case OperatorType.SUBASSIGN:
-                                break;
-                            case OperatorType.MULASSIGN:
-                                break;
-                            case OperatorType.DIVASSIGN:
-                                break;
-                            case OperatorType.MODASSIGN:
-                                break;
-                            case OperatorType.CONVERTTO:
-                                break;
-                            case OperatorType.INC:
-                                gen.Emit(OpCodes.Ldc_I4_1);
-                                gen.Emit(OpCodes.Add);
-                                break;
-                            case OperatorType.DEC:
-                                gen.Emit(OpCodes.Ldc_I4_1);
-                                gen.Emit(OpCodes.Sub);
-                                break;
-                            case OperatorType.IN:
-                                break;
-                            case OperatorType.GORE:
-                                break;
-                            case OperatorType.LORE:
-                                break;
-                            case OperatorType.RANGE:
-                                break;
-                            case OperatorType.POW:
-                                break;
-                        }
+                        needOperator = reader.operators.Peek();
                         break;
                     case TokenType.VALUE:
                         switch (reader.byte_values.Peek())
                         {
                             case 0:
-                                parameterTypes.Add(typeof(object));
+                                parameterTypes.Peek().Add(typeof(object));
                                 gen.Emit(OpCodes.Ldnull);
                                 break;
                             case 1:
-                                parameterTypes.Add(typeof(int));
+                                parameterTypes.Peek().Add(typeof(int));
                                 gen.Emit(OpCodes.Ldc_I4, (int)reader.values.Peek());
                                 break;
                             case 2:
-                                parameterTypes.Add(typeof(string));
+                                parameterTypes.Peek().Add(typeof(string));
                                 gen.Emit(OpCodes.Ldstr, (string)reader.values.Peek());
                                 break;
                             case 3:
-                                parameterTypes.Add(typeof(byte));
+                                parameterTypes.Peek().Add(typeof(byte));
                                 gen.Emit(OpCodes.Ldind_I1, (byte)reader.values.Peek());
                                 break;
                             case 4:
-                                parameterTypes.Add(typeof(bool));
+                                parameterTypes.Peek().Add(typeof(bool));
                                 if ((bool)reader.values.Peek()) gen.Emit(OpCodes.Ldc_I4_1);
                                 else gen.Emit(OpCodes.Ldc_I4_0);
                                 break;
                             case 5:
-                                parameterTypes.Add(typeof(char));
+                                parameterTypes.Peek().Add(typeof(char));
                                 gen.Emit(OpCodes.Ldc_I4, (char)reader.values.Peek());
                                 break;
                             case 6:
-                                parameterTypes.Add(typeof(float));
+                                parameterTypes.Peek().Add(typeof(float));
                                 gen.Emit(OpCodes.Ldc_R4, (float)reader.values.Peek());
                                 break;
                             case 7:
-                                parameterTypes.Add(typeof(short));
+                                parameterTypes.Peek().Add(typeof(short));
                                 gen.Emit(OpCodes.Ldind_I2, (short)reader.values.Peek());
                                 break;
                             case 8:
-                                parameterTypes.Add(typeof(long));
+                                parameterTypes.Peek().Add(typeof(long));
                                 gen.Emit(OpCodes.Ldind_I8, (long)reader.values.Peek());
                                 break;
                             case 9:
-                                parameterTypes.Add(typeof(double));
+                                parameterTypes.Peek().Add(typeof(double));
                                 gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Peek());
                                 break;
                         }
@@ -555,34 +591,7 @@ namespace TokensBuilder
                         usingNamespaces.Add(reader.string_values.Peek());
                         break;
                     case TokenType.INCLUDE:
-                        string path = reader.string_values.Peek();
-                        try
-                        {
-                            Assembly.LoadFrom(path);
-                        }
-                        catch (FileNotFoundException)
-                        {
-                            errors.Add(new IncludeError(line, $"The {path} was not found, or the module" +
-                                " you are trying to load does not indicate a file name extension."));
-                        }
-                        catch (FileLoadException)
-                        {
-                            errors.Add(new IncludeError(line, "Failed to load the file that was found." +
-                                " or The ability to execute code in remote assemblies is disabled."));
-                        }
-                        catch (BadImageFormatException)
-                        {
-                            errors.Add(new IncludeError(line, $"{Path.GetFileName(path)} is not valid assembly"));
-                        }
-                        catch (ArgumentException)
-                        {
-                            errors.Add(new IncludeError(line, $"Name of assembly is empty or not valid"));
-                        }
-                        catch (PathTooLongException)
-                        {
-                            errors.Add(new IncludeError(line, "The assembly name is longer than the maximum length" +
-                                " defined in the system."));
-                        }
+                        Include(reader.string_values.Peek());
                         break;
                     case TokenType.BREAKPOINT:
                         gen.Emit(OpCodes.Break);
