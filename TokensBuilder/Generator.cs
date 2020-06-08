@@ -511,7 +511,9 @@ namespace TokensBuilder
                                 break;
                             case 1:
                                 parameterTypes.Peek().Add(typeof(int));
-                                gen.Emit(OpCodes.Ldc_I4, (int)reader.values.Peek());
+                                int val = (int)reader.values.Peek();
+                                if (val <= byte.MaxValue && val >= byte.MinValue) gen.Emit(OpCodes.Ldc_I4_S, val);
+                                else gen.Emit(OpCodes.Ldc_I4, val);
                                 break;
                             case 2:
                                 parameterTypes.Peek().Add(typeof(string));
@@ -519,7 +521,7 @@ namespace TokensBuilder
                                 break;
                             case 3:
                                 parameterTypes.Peek().Add(typeof(byte));
-                                gen.Emit(OpCodes.Ldind_I1, (byte)reader.values.Peek());
+                                gen.Emit(OpCodes.Ldc_I4_S, (byte)reader.values.Peek());
                                 break;
                             case 4:
                                 parameterTypes.Peek().Add(typeof(bool));
@@ -536,11 +538,11 @@ namespace TokensBuilder
                                 break;
                             case 7:
                                 parameterTypes.Peek().Add(typeof(short));
-                                gen.Emit(OpCodes.Ldind_I2, (short)reader.values.Peek());
+                                gen.Emit(OpCodes.Ldc_I4, (short)reader.values.Peek());
                                 break;
                             case 8:
                                 parameterTypes.Peek().Add(typeof(long));
-                                gen.Emit(OpCodes.Ldind_I8, (long)reader.values.Peek());
+                                gen.Emit(OpCodes.Ldc_I8, (long)reader.values.Peek());
                                 break;
                             case 9:
                                 parameterTypes.Peek().Add(typeof(double));
