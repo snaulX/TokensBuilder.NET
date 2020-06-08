@@ -36,7 +36,7 @@ namespace TokensBuilder
         private TokenType prev;
         private Stack<int> lengthLiterals = new Stack<int>();
         private OperatorType? needOperator = null;
-        private object value1, value2;
+        private byte insertOp = 2;
 
         //properties
         private string curLiteral
@@ -215,30 +215,44 @@ namespace TokensBuilder
             switch (needOperator)
             {
                 case OperatorType.ADD:
+                    gen.Emit(OpCodes.Add);
                     break;
                 case OperatorType.SUB:
+                    gen.Emit(OpCodes.Sub);
                     break;
                 case OperatorType.MUL:
+                    gen.Emit(OpCodes.Mul);
                     break;
                 case OperatorType.DIV:
+                    gen.Emit(OpCodes.Div);
                     break;
                 case OperatorType.MOD:
+                    gen.Emit(OpCodes.Rem);
                     break;
                 case OperatorType.EQ:
+                    gen.Emit(OpCodes.Ceq);
                     break;
                 case OperatorType.NOTEQ:
+                    gen.Emit(OpCodes.Ceq);
+                    gen.Emit(OpCodes.Not);
                     break;
                 case OperatorType.NOT:
+                    gen.Emit(OpCodes.Not);
                     break;
                 case OperatorType.AND:
+                    gen.Emit(OpCodes.And);
                     break;
                 case OperatorType.OR:
+                    gen.Emit(OpCodes.Or);
                     break;
                 case OperatorType.XOR:
+                    gen.Emit(OpCodes.Xor);
                     break;
                 case OperatorType.GT:
+                    gen.Emit(OpCodes.Cgt);
                     break;
                 case OperatorType.LT:
+                    gen.Emit(OpCodes.Clt);
                     break;
                 case OperatorType.GTQ:
                     break;
@@ -271,8 +285,11 @@ namespace TokensBuilder
                 case OperatorType.RANGE:
                     break;
                 case OperatorType.POW:
+                    gen.Emit(OpCodes.Call, typeof(Math).GetMethod("Pow"));
                     break;
             }
+            needOperator = null;
+            insertOp = 2;
         }
 
         private void Include(string path)
@@ -357,6 +374,11 @@ namespace TokensBuilder
 
         public void ParseToken(TokenType token)
         {
+            #region Parse operator
+            if (insertOp == 0) insertOp = 1;
+            else if (insertOp == 1) ParseOperator();
+            #endregion
+
             if (needEnd)
             {
                 if (!IsEnd(token)) errors.Add(new TokensError(line, "End of expression with breakpoint not found"));
@@ -501,6 +523,7 @@ namespace TokensBuilder
                         break;
                     case TokenType.OPERATOR:
                         needOperator = reader.operators.Peek();
+                        insertOp = 0;
                         break;
                     case TokenType.VALUE:
                         switch (reader.byte_values.Peek())
