@@ -364,7 +364,7 @@ namespace TokensBuilder
                 catch (AmbiguousMatchException)
                 {
                     errors.Add(new InvalidMethodError(line, $"Invalid types of parameters " +
-                        $"{string.Join(", ", parameterTypes)} in method {typeName}.{methName}"));
+                        $"{string.Join(", ", parameterTypes.Peek())} in method {typeName}.{methName}"));
                 }
                 parameterTypes.Pop();
             }
@@ -526,49 +526,50 @@ namespace TokensBuilder
                         insertOp = 0;
                         break;
                     case TokenType.VALUE:
+                        bool needAdd = insertOp == 2;
                         switch (reader.byte_values.Peek())
                         {
                             case 0:
-                                parameterTypes.Peek().Add(typeof(object));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(object));
                                 gen.Emit(OpCodes.Ldnull);
                                 break;
                             case 1:
-                                parameterTypes.Peek().Add(typeof(int));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(int));
                                 int val = (int)reader.values.Peek();
                                 if (val <= byte.MaxValue && val >= byte.MinValue) gen.Emit(OpCodes.Ldc_I4_S, val);
                                 else gen.Emit(OpCodes.Ldc_I4, val);
                                 break;
                             case 2:
-                                parameterTypes.Peek().Add(typeof(string));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(string));
                                 gen.Emit(OpCodes.Ldstr, (string)reader.values.Peek());
                                 break;
                             case 3:
-                                parameterTypes.Peek().Add(typeof(byte));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(byte));
                                 gen.Emit(OpCodes.Ldc_I4_S, (byte)reader.values.Peek());
                                 break;
                             case 4:
-                                parameterTypes.Peek().Add(typeof(bool));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(bool));
                                 if ((bool)reader.values.Peek()) gen.Emit(OpCodes.Ldc_I4_1);
                                 else gen.Emit(OpCodes.Ldc_I4_0);
                                 break;
                             case 5:
-                                parameterTypes.Peek().Add(typeof(char));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(char));
                                 gen.Emit(OpCodes.Ldc_I4, (char)reader.values.Peek());
                                 break;
                             case 6:
-                                parameterTypes.Peek().Add(typeof(float));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(float));
                                 gen.Emit(OpCodes.Ldc_R4, (float)reader.values.Peek());
                                 break;
                             case 7:
-                                parameterTypes.Peek().Add(typeof(short));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(short));
                                 gen.Emit(OpCodes.Ldc_I4, (short)reader.values.Peek());
                                 break;
                             case 8:
-                                parameterTypes.Peek().Add(typeof(long));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(long));
                                 gen.Emit(OpCodes.Ldc_I8, (long)reader.values.Peek());
                                 break;
                             case 9:
-                                parameterTypes.Peek().Add(typeof(double));
+                                if (needAdd) parameterTypes.Peek().Add(typeof(double));
                                 gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Peek());
                                 break;
                         }
