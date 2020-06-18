@@ -15,6 +15,7 @@ namespace TokensBuilder
         //curLiteralIndex - index of peeked (need) literal
         //funcArgs - level of argments of method
         //lengthLiterals - список количеств литералов, которые идут через сепаратор (точку) подряд
+        //putLoopStatement - идёт ли добавление выражения цикла? (например блок цикла закончился и после него мы пушим выражение)
 
         public uint line = 0;
         public TokensReader reader;
@@ -28,7 +29,7 @@ namespace TokensBuilder
         public Stack<List<Type>> parameterTypes = new Stack<List<Type>>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         public Stack<List<OpCode>> blocks = new Stack<List<OpCode>>();
-        public bool tryDirective = false;
+        public bool tryDirective = false, putLoopStatement = false;
         public TokenType prev;
 
         //flags
@@ -54,7 +55,7 @@ namespace TokensBuilder
         private bool isFuncArgs => funcArgs > 0;
         private bool dontPop 
         {
-            get => needAssign || needReturn || isFuncArgs;
+            get => needAssign || needReturn || isFuncArgs || putLoopStatement;
             set
             {
                 needAssign = value;
@@ -251,8 +252,9 @@ namespace TokensBuilder
                     gen.Emit(OpCodes.Ceq);
                     break;
                 case OperatorType.NOTEQ:
-                    gen.Emit(OpCodes.Ceq);
-                    gen.Emit(OpCodes.Not);
+                    //gen.Emit(OpCodes.Ceq);
+                    //gen.Emit(OpCodes.Not);
+                    gen.Emit(OpCodes.Call, parameterTypes.Peek()[1].GetMethod("op_Inequality", parameterTypes.Peek().ToArray()));
                     break;
                 case OperatorType.NOT:
                     gen.Emit(OpCodes.Not);
@@ -366,7 +368,7 @@ namespace TokensBuilder
                     }
                     else
                     {
-                        if (isFuncArgs) parameterTypes.Peek().Add(callingMethod.ReturnType);
+                        if (isFuncArgs || putLoopStatement) parameterTypes.Peek().Add(callingMethod.ReturnType);
                         dontPop = false;
                     }
                 }
@@ -391,7 +393,7 @@ namespace TokensBuilder
 
         private void ParseValue()
         {
-            bool needAdd = insertOp == 2;
+            bool needAdd = insertOp == 2 || putLoopStatement;
             switch (reader.byte_values.Peek())
             {
                 case 0:

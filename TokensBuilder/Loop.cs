@@ -32,6 +32,8 @@ namespace TokensBuilder
         {
             Generator generator = new Generator();
             generator.reader = statementCode;
+            generator.putLoopStatement = true;
+            generator.parameterTypes.Push(new List<Type>());
             while (generator.reader.tokens.Count > 0)
             {
                 if (generator.tryDirective)
