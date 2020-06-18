@@ -9,7 +9,7 @@ namespace TokensBuilder
     {
         public LoopType type;
         public TokensReader statementCode;
-        public Label startLoop;
+        public Label startLoop, endLoop;
         public LocalBuilder statementVar;
         private ILGenerator gen => Context.functionBuilder.generator;
 
@@ -19,6 +19,8 @@ namespace TokensBuilder
             statementCode = new TokensReader();
             statementVar = gen.DeclareLocal(typeof(bool));
             startLoop = gen.DefineLabel();
+            endLoop = gen.DefineLabel();
+            gen.Emit(OpCodes.Br_S, endLoop);
             gen.MarkLabel(startLoop);
         }
 
@@ -30,6 +32,7 @@ namespace TokensBuilder
 
         public void EndLoop()
         {
+            gen.MarkLabel(endLoop);
             Generator generator = new Generator();
             generator.reader = statementCode;
             generator.putLoopStatement = true;
