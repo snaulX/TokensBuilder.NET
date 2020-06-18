@@ -56,6 +56,7 @@
     <Compile Include="Errors\DirectiveError.cs" />
     <Compile Include="Errors\IncludeError.cs" />
     <Compile Include="Errors\InvalidHeaderError.cs" />
+    <Compile Include="Errors\InvalidLoopError.cs" />
     <Compile Include="Errors\InvalidMethodError.cs" />
     <Compile Include="Errors\InvalidOutTypeError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
@@ -66,6 +67,7 @@
     <Compile Include="FunctionBuilder.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="HeaderType.cs" />
+    <Compile Include="Loop.cs" />
     <Compile Include="TokensBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TokensError.cs" />

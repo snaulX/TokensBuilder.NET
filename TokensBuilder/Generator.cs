@@ -27,15 +27,18 @@ namespace TokensBuilder
         public List<CustomAttributeBuilder> attributes = new List<CustomAttributeBuilder>();
         public Stack<List<Type>> parameterTypes = new Stack<List<Type>>();
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
+        public Stack<List<OpCode>> blocks = new Stack<List<OpCode>>();
+        public bool tryDirective = false;
+        public TokenType prev;
 
         //flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
-            needSeparator = false, needReturn = false, needAssign = false, tryDirective = false, initClass = false, 
-            isParams = false, isFuncAlias = false, isTypeAlias = false, isCtor = false;
-        private int curLiteralIndex = 0, funcArgs = 0;
-        private TokenType prev;
+            needSeparator = false, needReturn = false, needAssign = false, initClass = false, isParams = false,
+            isFuncAlias = false, isTypeAlias = false, isCtor = false, needBlock = false;
+        private int curLiteralIndex = 0, funcArgs = 0, loopStatement = 0;
         private Stack<int> lengthLiterals = new Stack<int>();
         private OperatorType? needOperator = null;
+        private Stack<Loop> loops = new Stack<Loop>();
         private byte insertOp = 2;
 
         //properties
@@ -57,6 +60,17 @@ namespace TokensBuilder
                 needAssign = value;
                 //if (!value && needReturn) gen.Emit(OpCodes.Ret);
                 needReturn = value;
+            }
+        }
+        private bool isLoopStatement
+        {
+            get => loopStatement > 0;
+            set
+            {
+                if (value)
+                    loopStatement = needEndStatement;
+                else
+                    needEndStatement = 0;
             }
         }
         /// <summary>
@@ -198,6 +212,10 @@ namespace TokensBuilder
                     funcArgs++;
                     AddLengthLiteral();
                     parameterTypes.Push(new List<Type>());
+                }
+                else if (prev == TokenType.LOOP)
+                {
+                    isLoopStatement = true;
                 }
             }
             else
@@ -370,6 +388,57 @@ namespace TokensBuilder
             }
             RemoveLastLiterals();
         }
+
+        private void ParseValue()
+        {
+            bool needAdd = insertOp == 2;
+            switch (reader.byte_values.Peek())
+            {
+                case 0:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(object));
+                    gen.Emit(OpCodes.Ldnull);
+                    break;
+                case 1:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(int));
+                    int val = (int)reader.values.Peek();
+                    if (val <= sbyte.MaxValue && val >= sbyte.MinValue) gen.Emit(OpCodes.Ldc_I4_S, val);
+                    else gen.Emit(OpCodes.Ldc_I4, val);
+                    break;
+                case 2:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(string));
+                    gen.Emit(OpCodes.Ldstr, (string)reader.values.Peek());
+                    break;
+                case 3:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(sbyte));
+                    gen.Emit(OpCodes.Ldc_I4_S, (sbyte)reader.values.Peek());
+                    break;
+                case 4:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(bool));
+                    if ((bool)reader.values.Peek()) gen.Emit(OpCodes.Ldc_I4_1);
+                    else gen.Emit(OpCodes.Ldc_I4_0);
+                    break;
+                case 5:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(char));
+                    gen.Emit(OpCodes.Ldc_I4, (char)reader.values.Peek());
+                    break;
+                case 6:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(float));
+                    gen.Emit(OpCodes.Ldc_R4, (float)reader.values.Peek());
+                    break;
+                case 7:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(short));
+                    gen.Emit(OpCodes.Ldc_I4, (short)reader.values.Peek());
+                    break;
+                case 8:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(long));
+                    gen.Emit(OpCodes.Ldc_I8, (long)reader.values.Peek());
+                    break;
+                case 9:
+                    if (needAdd) parameterTypes.Peek().Add(typeof(double));
+                    gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Peek());
+                    break;
+            }
+        }
         #endregion
 
         public void ParseToken(TokenType token)
@@ -420,6 +489,57 @@ namespace TokensBuilder
                 }
                 ParseToken(token);
             }
+            else if (isLoopStatement)
+            {
+                loops.Peek().statementCode.tokens.Add(token);
+                if (token == TokenType.STATEMENT)
+                {
+                    bool open = reader.bool_values.Peek();
+                    if (needEndStatement == loopStatement && !open)
+                    {
+                        loops.Peek().statementCode.bool_values.Add(false);
+                        loopStatement = 0;
+                        needEndStatement--;
+                    }
+                    else
+                    {
+                        if (open)
+                        {
+                            loops.Peek().statementCode.bool_values.Add(true);
+                            needEndStatement++;
+                        }
+                        else
+                        {
+                            loops.Peek().statementCode.bool_values.Add(false);
+                            needEndStatement--;
+                        }
+                    }
+                }
+                else if (token == TokenType.VAR)
+                {
+                    if (loops.Peek().type != LoopType.FOR)
+                    {
+                        errors.Add(new InvalidLoopError(line, $"Variable cannot be created in {loops.Peek().type} loop"));
+                    }
+                }
+                else if (token == TokenType.SEQUENCE || token == TokenType.SEPARATOR)
+                {
+                    loops.Peek().statementCode.bool_values.Add(reader.bool_values.Peek());
+                }
+                else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.INSTANCEOF)
+                {
+                    loops.Peek().statementCode.string_values.Add(reader.string_values.Peek());
+                }
+                else if (token == TokenType.VALUE)
+                {
+                    loops.Peek().statementCode.byte_values.Add(reader.byte_values.Peek());
+                    loops.Peek().statementCode.values.Add(reader.values.Peek());
+                }
+                else if (token == TokenType.OPERATOR)
+                {
+                    loops.Peek().statementCode.operators.Add(reader.operators.Peek());
+                }
+            }
             else
             {
                 switch (token)
@@ -440,7 +560,6 @@ namespace TokensBuilder
                     case TokenType.VAR:
                         if (isFuncBody)
                         {
-                            //Context.functionBuilder.DeclareLocal(reader.string_values.Peek(), reader.string_values.Peek());
                             Context.CreateField();
                         }
                         break;
@@ -453,7 +572,11 @@ namespace TokensBuilder
                         }
                         else
                         {
-                            if (isFuncBody)
+                            if (!loops.IsEmpty())
+                            {
+                                loops.Pop().EndLoop();
+                            }
+                            else if (isFuncBody)
                             {
                                 gen.Emit(OpCodes.Ret);
                                 Context.classBuilder.methodBuilder = null;
@@ -514,6 +637,8 @@ namespace TokensBuilder
                         needAssign = false;
                         break;
                     case TokenType.LOOP:
+                        Loop newLoop = new Loop(reader.loops.Peek());
+                        loops.Push(newLoop);
                         break;
                     case TokenType.LABEL:
                         break;
@@ -526,53 +651,7 @@ namespace TokensBuilder
                         insertOp = 0;
                         break;
                     case TokenType.VALUE:
-                        bool needAdd = insertOp == 2;
-                        switch (reader.byte_values.Peek())
-                        {
-                            case 0:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(object));
-                                gen.Emit(OpCodes.Ldnull);
-                                break;
-                            case 1:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(int));
-                                int val = (int)reader.values.Peek();
-                                if (val <= byte.MaxValue && val >= byte.MinValue) gen.Emit(OpCodes.Ldc_I4_S, val);
-                                else gen.Emit(OpCodes.Ldc_I4, val);
-                                break;
-                            case 2:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(string));
-                                gen.Emit(OpCodes.Ldstr, (string)reader.values.Peek());
-                                break;
-                            case 3:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(byte));
-                                gen.Emit(OpCodes.Ldc_I4_S, (byte)reader.values.Peek());
-                                break;
-                            case 4:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(bool));
-                                if ((bool)reader.values.Peek()) gen.Emit(OpCodes.Ldc_I4_1);
-                                else gen.Emit(OpCodes.Ldc_I4_0);
-                                break;
-                            case 5:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(char));
-                                gen.Emit(OpCodes.Ldc_I4, (char)reader.values.Peek());
-                                break;
-                            case 6:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(float));
-                                gen.Emit(OpCodes.Ldc_R4, (float)reader.values.Peek());
-                                break;
-                            case 7:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(short));
-                                gen.Emit(OpCodes.Ldc_I4, (short)reader.values.Peek());
-                                break;
-                            case 8:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(long));
-                                gen.Emit(OpCodes.Ldc_I8, (long)reader.values.Peek());
-                                break;
-                            case 9:
-                                if (needAdd) parameterTypes.Peek().Add(typeof(double));
-                                gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Peek());
-                                break;
-                        }
+                        ParseValue();
                         break;
                     case TokenType.NULLABLE:
                         break;
@@ -611,7 +690,7 @@ namespace TokensBuilder
                         currentNamespace = reader.string_values.Peek();
                         break;
                     case TokenType.IMPORT_LIBRARY:
-                        ParseTokensLibrary(reader.string_values.Peek(), ref reader);
+                        ParseTokensLibrary(reader.string_values.Peek());
                         break;
                     case TokenType.USING_NAMESPACE:
                         usingNamespaces.Add(reader.string_values.Peek());
@@ -624,11 +703,11 @@ namespace TokensBuilder
                         needEnd = true;
                         break;
                     case TokenType.IMPLEMENTS:
-                        CheckOnAllClosed();
+                        //CheckOnAllClosed();
                         implements = true;
                         break;
                     case TokenType.EXTENDS:
-                        CheckOnAllClosed();
+                        //CheckOnAllClosed();
                         extends = true;
                         break;
                     case TokenType.INSTANCEOF:
@@ -651,7 +730,7 @@ namespace TokensBuilder
             }
         }
 
-        public void ParseTokensLibrary(string path, ref TokensReader treader)
+        public void ParseTokensLibrary(string path)
         {
             TokensReader tokensReader = new TokensReader();
             try
@@ -668,7 +747,7 @@ namespace TokensBuilder
             if (header != 5) throw new InvalidHeaderException(header);
             reader.ReadTokens();
             reader.EndWork();
-            treader.Add(tokensReader);
+            reader.Add(tokensReader);
         }
     }
 }
