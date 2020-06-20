@@ -52,6 +52,7 @@
     <Compile Include="ClassBuilder.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Context.cs" />
+    <Compile Include="DoWhileLoop.cs" />
     <Compile Include="EntrypointAttribute.cs" />
     <Compile Include="Errors\DirectiveError.cs" />
     <Compile Include="Errors\IncludeError.cs" />
@@ -68,6 +69,7 @@
     <Compile Include="Generator.cs" />
     <Compile Include="HeaderType.cs" />
     <Compile Include="Loop.cs" />
+    <Compile Include="WhileLoop.cs" />
     <Compile Include="TokensBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TokensError.cs" />

@@ -17,7 +17,7 @@ namespace TokensBuilder
         //lengthLiterals - список количеств литералов, которые идут через сепаратор (точку) подряд
         //putLoopStatement - идёт ли добавление выражения цикла? (например блок цикла закончился и после него мы пушим выражение)
 
-        public uint line = 0;
+        public uint line = 0, loopStatement = 0;
         public TokensReader reader;
         public string currentNamespace = "";
         public List<string> literals = new List<string>(), usingNamespaces = new List<string>();
@@ -36,7 +36,7 @@ namespace TokensBuilder
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
             needSeparator = false, needReturn = false, needAssign = false, initClass = false, isParams = false,
             isFuncAlias = false, isTypeAlias = false, isCtor = false, needBlock = false;
-        private int curLiteralIndex = 0, funcArgs = 0, loopStatement = 0;
+        private int curLiteralIndex = 0, funcArgs = 0;
         private Stack<int> lengthLiterals = new Stack<int>();
         private OperatorType? needOperator = null;
         private Stack<Loop> loops = new Stack<Loop>();
@@ -252,8 +252,6 @@ namespace TokensBuilder
                     gen.Emit(OpCodes.Ceq);
                     break;
                 case OperatorType.NOTEQ:
-                    //gen.Emit(OpCodes.Ceq);
-                    //gen.Emit(OpCodes.Not);
                     gen.Emit(OpCodes.Call, parameterTypes.Peek()[1].GetMethod("op_Inequality", parameterTypes.Peek().ToArray()));
                     break;
                 case OperatorType.NOT:
@@ -293,8 +291,12 @@ namespace TokensBuilder
                 case OperatorType.CONVERTTO:
                     break;
                 case OperatorType.INC:
+                    gen.Emit(OpCodes.Ldc_I4_1);
+                    gen.Emit(OpCodes.Add);
                     break;
                 case OperatorType.DEC:
+                    gen.Emit(OpCodes.Ldc_I4_1);
+                    gen.Emit(OpCodes.Sub);
                     break;
                 case OperatorType.IN:
                     break;
@@ -493,54 +495,7 @@ namespace TokensBuilder
             }
             else if (isLoopStatement)
             {
-                loops.Peek().statementCode.tokens.Add(token);
-                if (token == TokenType.STATEMENT)
-                {
-                    bool open = reader.bool_values.Peek();
-                    if (needEndStatement == loopStatement && !open)
-                    {
-                        loops.Peek().statementCode.bool_values.Add(false);
-                        loopStatement = 0;
-                        needEndStatement--;
-                    }
-                    else
-                    {
-                        if (open)
-                        {
-                            loops.Peek().statementCode.bool_values.Add(true);
-                            needEndStatement++;
-                        }
-                        else
-                        {
-                            loops.Peek().statementCode.bool_values.Add(false);
-                            needEndStatement--;
-                        }
-                    }
-                }
-                else if (token == TokenType.VAR)
-                {
-                    if (loops.Peek().type != LoopType.FOR)
-                    {
-                        errors.Add(new InvalidLoopError(line, $"Variable cannot be created in {loops.Peek().type} loop"));
-                    }
-                }
-                else if (token == TokenType.SEQUENCE || token == TokenType.SEPARATOR)
-                {
-                    loops.Peek().statementCode.bool_values.Add(reader.bool_values.Peek());
-                }
-                else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.INSTANCEOF)
-                {
-                    loops.Peek().statementCode.string_values.Add(reader.string_values.Peek());
-                }
-                else if (token == TokenType.VALUE)
-                {
-                    loops.Peek().statementCode.byte_values.Add(reader.byte_values.Peek());
-                    loops.Peek().statementCode.values.Add(reader.values.Peek());
-                }
-                else if (token == TokenType.OPERATOR)
-                {
-                    loops.Peek().statementCode.operators.Add(reader.operators.Peek());
-                }
+                if (ParseLoopStatement(token)) loopStatement = 0;
             }
             else
             {
@@ -576,7 +531,15 @@ namespace TokensBuilder
                         {
                             if (!loops.IsEmpty())
                             {
-                                loops.Pop().EndLoop();
+                                if (loops.Peek() is DoWhileLoop)
+                                {
+                                    loops.Peek().EndLoop();
+                                    loops.Pop();
+                                }
+                                else
+                                {
+                                    loops.Pop().EndLoop();
+                                }
                             }
                             else if (isFuncBody)
                             {
@@ -639,8 +602,9 @@ namespace TokensBuilder
                         needAssign = false;
                         break;
                     case TokenType.LOOP:
-                        Loop newLoop = new Loop(reader.loops.Peek());
-                        loops.Push(newLoop);
+                        LoopType ltype = reader.loops.Peek();
+                        if (ltype == LoopType.WHILE) loops.Push(new WhileLoop());
+                        else if (ltype == LoopType.DO) loops.Push(new DoWhileLoop());
                         break;
                     case TokenType.LABEL:
                         break;
@@ -728,6 +692,9 @@ namespace TokensBuilder
                         break;
                     case TokenType.REF:
                         break;
+                    case TokenType.GENERIC:
+                        errors.Add(new TokensError(line, "Generics not support in this version of compiler"));
+                        break;
                 }
             }
         }
@@ -750,6 +717,52 @@ namespace TokensBuilder
             reader.ReadTokens();
             reader.EndWork();
             reader.Add(tokensReader);
+        }
+
+        public bool ParseLoopStatement(TokenType token)
+        {
+            loops.Peek().statementCode.tokens.Add(token);
+            if (token == TokenType.STATEMENT)
+            {
+                bool open = reader.bool_values.Peek();
+                if (needEndStatement == loopStatement && !open)
+                {
+                    loops.Peek().statementCode.bool_values.Add(false);
+                    needEndStatement--;
+                    return true;
+                }
+                else
+                {
+                    if (open)
+                    {
+                        loops.Peek().statementCode.bool_values.Add(true);
+                        needEndStatement++;
+                    }
+                    else
+                    {
+                        loops.Peek().statementCode.bool_values.Add(false);
+                        needEndStatement--;
+                    }
+                }
+            }
+            else if (token == TokenType.SEQUENCE || token == TokenType.SEPARATOR)
+            {
+                loops.Peek().statementCode.bool_values.Add(reader.bool_values.Peek());
+            }
+            else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.INSTANCEOF)
+            {
+                loops.Peek().statementCode.string_values.Add(reader.string_values.Peek());
+            }
+            else if (token == TokenType.VALUE)
+            {
+                loops.Peek().statementCode.byte_values.Add(reader.byte_values.Peek());
+                loops.Peek().statementCode.values.Add(reader.values.Peek());
+            }
+            else if (token == TokenType.OPERATOR)
+            {
+                loops.Peek().statementCode.operators.Add(reader.operators.Peek());
+            }
+            return false;
         }
     }
 }
