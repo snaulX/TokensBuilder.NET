@@ -115,6 +115,21 @@ namespace TokensBuilder
             classBuilder.DefineField(name, typeName, fieldAttributes);
         }
 
+        public static void CreateLocal()
+        {
+            string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
+            Console.WriteLine(typeName);
+            Console.WriteLine(name);
+            gen.reader.securities.Peek();
+            VarType varType = gen.reader.var_types.Peek();
+            if (varType == VarType.CONST || varType == VarType.FINAL)
+                functionBuilder.localFinals.Add(name, functionBuilder.DeclareLocal(typeName));
+            else if (varType == VarType.DEFAULT)
+                functionBuilder.localVariables.Add(name, functionBuilder.DeclareLocal(typeName));
+            else
+                gen.errors.Add(new InvalidVarTypeError(gen.line, $"Type of variable {varType} is not valid for local variables"));
+        }
+
         public static FuncType CreateMethod()
         {
             string name = gen.reader.string_values.Peek(), typeName = gen.reader.string_values.Peek();

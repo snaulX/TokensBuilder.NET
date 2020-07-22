@@ -174,11 +174,52 @@ namespace TokensBuilder
             {
                 if (tryDirective)
                 {
-                    int errlen = errors.Count;
-                    ParseToken(reader.tokens.Peek());
-                    if (errors.Count > errlen)
-                        errors.RemoveRange(errlen, errors.Count);
-                    //tryDirective = false;
+                    //int errlen = errors.Count;
+                    Generator backup = this;
+                    //TokensReader tokensBackup = reader;
+                    backup.ParseToken(backup.reader.tokens.Peek());
+                    if (backup.errors.Count == errors.Count)
+                    {
+                        this.blocks = backup.blocks;
+                        this.attributes = backup.attributes;
+                        this.curLiteralIndex = backup.curLiteralIndex;
+                        this.currentNamespace = backup.currentNamespace;
+                        this.directives = backup.directives;
+                        this.extends = backup.extends;
+                        this.funcArgs = backup.funcArgs;
+                        this.ifDirective = backup.ifDirective;
+                        this.implements = backup.implements;
+                        this.initClass = backup.initClass;
+                        this.insertOp = backup.insertOp;
+                        this.isActual = backup.isActual;
+                        this.isCtor = backup.isCtor;
+                        this.isDirective = backup.isDirective;
+                        this.isFuncAlias = backup.isFuncAlias;
+                        this.isParams = backup.isParams;
+                        this.isTypeAlias = backup.isTypeAlias;
+                        this.labels = backup.labels;
+                        this.lengthLiterals = backup.lengthLiterals;
+                        this.line = backup.line;
+                        this.literals = backup.literals;
+                        this.loops = backup.loops;
+                        this.loopStatement = backup.loopStatement;
+                        this.needAssign = backup.needAssign;
+                        this.needBlock = backup.needBlock;
+                        this.needEnd = backup.needEnd;
+                        this.needEndBlock = backup.needEndBlock;
+                        this.needEndSequence = backup.needEndSequence;
+                        this.needEndStatement = backup.needEndStatement;
+                        this.needOperator = backup.needOperator;
+                        this.needReturn = backup.needReturn;
+                        this.needSeparator = backup.needSeparator;
+                        this.parameterTypes = backup.parameterTypes;
+                        this.prev = backup.prev;
+                        this.putLoopStatement = backup.putLoopStatement;
+                        this.reader = backup.reader;
+                        this.usingNamespaces = backup.usingNamespaces;
+                        tryDirective = false;
+                    }
+                        //errors.RemoveRange(errlen, errors.Count);
                 }
                 else
                 {
@@ -231,6 +272,8 @@ namespace TokensBuilder
 
         private void ParseOperator()
         {
+            // Second and first values in stack
+            Type f = parameterTypes.Peek()[0];
             switch (needOperator)
             {
                 case OperatorType.ADD:
@@ -252,7 +295,12 @@ namespace TokensBuilder
                     gen.Emit(OpCodes.Ceq);
                     break;
                 case OperatorType.NOTEQ:
-                    gen.Emit(OpCodes.Call, parameterTypes.Peek()[1].GetMethod("op_Inequality", parameterTypes.Peek().ToArray()));
+                    if (f.IsSimpleDataType())
+                    {
+                        gen.Emit(OpCodes.Ceq);
+                        gen.Emit(OpCodes.Not);
+                    }
+                    else gen.Emit(OpCodes.Call, f.GetMethod("op_Inequality", parameterTypes.Peek().ToArray()));
                     break;
                 case OperatorType.NOT:
                     gen.Emit(OpCodes.Not);
@@ -516,6 +564,10 @@ namespace TokensBuilder
                         break;
                     case TokenType.VAR:
                         if (isFuncBody)
+                        {
+                            Context.CreateLocal();
+                        }
+                        else
                         {
                             Context.CreateField();
                         }

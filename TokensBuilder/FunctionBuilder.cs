@@ -12,13 +12,13 @@ namespace TokensBuilder
         public MethodBuilder methodBuilder = null;
         public ConstructorBuilder constructorBuilder = null;
         public FuncType type = FuncType.DEFAULT;
-        public Dictionary<string, LocalBuilder> localVariables = new Dictionary<string, LocalBuilder>();
+        public Dictionary<string, LocalBuilder> localVariables = new Dictionary<string, LocalBuilder>(),
+            localFinals = new Dictionary<string, LocalBuilder>();
         public ParameterAttributes parameterAttributes = ParameterAttributes.None;
         public ILGenerator generator => constructorBuilder == null ? methodBuilder.GetILGenerator() : constructorBuilder.GetILGenerator();
         private Generator gen => TokensBuilder.gen;
 
-        public void DeclareLocal(string name, string typeName) => 
-            localVariables.Add(name, generator.DeclareLocal(Context.GetTypeByName(typeName)));
+        public LocalBuilder DeclareLocal(string typeName) =>  generator.DeclareLocal(Context.GetTypeByName(typeName));
 
         public FunctionBuilder(MethodBuilder methodBuilder)
         {
