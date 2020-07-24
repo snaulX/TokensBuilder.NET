@@ -59,6 +59,7 @@
     <Compile Include="Errors\InvalidHeaderError.cs" />
     <Compile Include="Errors\InvalidLoopError.cs" />
     <Compile Include="Errors\InvalidMethodError.cs" />
+    <Compile Include="Errors\InvalidOperatorError.cs" />
     <Compile Include="Errors\InvalidOutTypeError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
     <Compile Include="Errors\InvalidVarTypeError.cs" />

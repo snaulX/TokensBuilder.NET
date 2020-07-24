@@ -100,6 +100,8 @@ namespace TokensBuilder
         public static void CreateField()
         {
             string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
+            gen.reader.tokens.RemoveAt(0); // remove name
+            gen.reader.tokens.RemoveAt(0); // remove name of type
             Console.WriteLine(typeName);
             Console.WriteLine(name);
             FieldAttributes fieldAttributes;
@@ -117,17 +119,69 @@ namespace TokensBuilder
 
         public static void CreateLocal()
         {
-            string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
-            Console.WriteLine(typeName);
-            Console.WriteLine(name);
+            string typeName = gen.reader.string_values.Peek();
+            gen.reader.tokens.RemoveAt(0); // remove name of type
             gen.reader.securities.Peek();
             VarType varType = gen.reader.var_types.Peek();
+
+            check_var:
+            string name = gen.reader.string_values.Peek();
+            gen.reader.tokens.RemoveAt(0); // remove name
             if (varType == VarType.CONST || varType == VarType.FINAL)
                 functionBuilder.localFinals.Add(name, functionBuilder.DeclareLocal(typeName));
             else if (varType == VarType.DEFAULT)
                 functionBuilder.localVariables.Add(name, functionBuilder.DeclareLocal(typeName));
             else
                 gen.errors.Add(new InvalidVarTypeError(gen.line, $"Type of variable {varType} is not valid for local variables"));
+            TokenType curtoken = gen.reader.tokens.Peek();
+            if (curtoken == TokenType.OPERATOR)
+            {
+                OperatorType optype = gen.reader.operators.Peek();
+                if (optype == OperatorType.ASSIGN)
+                {
+                    gen.parameterTypes.Push(new List<Type>()); // create new parameter types for value
+                    curtoken = gen.reader.tokens.Peek();
+                    do
+                    {
+                        gen.ParseToken(curtoken);
+                    }
+                    while (curtoken != TokenType.SEPARATOR || curtoken != TokenType.EXPRESSION_END);
+                    if (gen.parameterTypes.Pop()[0] != GetTypeByName(typeName))
+                        gen.errors.Add(new TokensError(gen.line, "Type of value not equals type of variable"));
+                    if (varType == VarType.CONST || varType == VarType.FINAL)
+                        functionBuilder.generator.Emit(OpCodes.Stloc_S, functionBuilder.localFinals[name]); // save getted value
+                    else if (varType == VarType.DEFAULT)
+                        functionBuilder.generator.Emit(OpCodes.Stloc_S, functionBuilder.localVariables[name]); // save getted value
+                    if (curtoken == TokenType.SEPARATOR)
+                    {
+                        if (gen.reader.bool_values.Peek())
+                            goto check_var;
+                        else
+                            gen.errors.Add(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
+                    }
+                    else // EXPRESSION_END
+                    {
+                        return;
+                    }
+                }
+                else
+                    gen.errors.Add(new InvalidOperatorError(gen.line, $"Operator {optype} cannot be after variable declaration"));
+            }
+            else if (curtoken == TokenType.EXPRESSION_END)
+            {
+                return;
+            }
+            else if (curtoken == TokenType.SEPARATOR)
+            {
+                if (gen.reader.bool_values.Peek())
+                    goto check_var;
+                else
+                    gen.errors.Add(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
+            }
+            else
+            {
+                gen.errors.Add(new InvalidTokenError(gen.line, $"Invalid token {curtoken} after variable definition"));
+            }
         }
 
         public static FuncType CreateMethod()

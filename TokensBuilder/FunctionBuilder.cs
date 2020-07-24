@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
+using TokensBuilder.Errors;
 
 namespace TokensBuilder
 {
@@ -18,7 +19,13 @@ namespace TokensBuilder
         public ILGenerator generator => constructorBuilder == null ? methodBuilder.GetILGenerator() : constructorBuilder.GetILGenerator();
         private Generator gen => TokensBuilder.gen;
 
-        public LocalBuilder DeclareLocal(string typeName) =>  generator.DeclareLocal(Context.GetTypeByName(typeName));
+        public LocalBuilder DeclareLocal(string typeName)
+        {
+            Type type = Context.GetTypeByName(typeName);
+            if (type == null)
+                gen.errors.Add(new TypeNotFoundError(gen.line, $"Type with name '{typeName}' for local variable not found"));
+            return generator.DeclareLocal(type);
+        }
 
         public FunctionBuilder(MethodBuilder methodBuilder)
         {
