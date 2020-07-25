@@ -23,8 +23,29 @@ namespace TokensBuilder
         {
             Type type = Context.GetTypeByName(typeName);
             if (type == null)
+            {
                 gen.errors.Add(new TypeNotFoundError(gen.line, $"Type with name '{typeName}' for local variable not found"));
+                return null;
+            }
             return generator.DeclareLocal(type);
+        }
+        public LocalBuilder GetLocal(string name)
+        {
+            try
+            {
+                return localFinals[name];
+            }
+            catch (KeyNotFoundException)
+            {
+                try
+                {
+                    return localVariables[name];
+                }
+                catch (KeyNotFoundException)
+                {
+                    return null;
+                }
+            }
         }
 
         public FunctionBuilder(MethodBuilder methodBuilder)

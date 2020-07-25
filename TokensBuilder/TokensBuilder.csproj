@@ -67,6 +67,7 @@
     <Compile Include="Errors\PlatformImplementationError.cs" />
     <Compile Include="Errors\TokensLibraryError.cs" />
     <Compile Include="Errors\TypeNotFoundError.cs" />
+    <Compile Include="Errors\VarNotFoundError.cs" />
     <Compile Include="FunctionBuilder.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="HeaderType.cs" />

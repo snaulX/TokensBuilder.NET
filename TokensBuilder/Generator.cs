@@ -272,8 +272,31 @@ namespace TokensBuilder
 
         private void ParseOperator()
         {
-            // Second and first values in stack
-            Type f = parameterTypes.Peek()[0];
+            // First values in stack
+            Type f;
+            try
+            {
+                f = parameterTypes.Peek()[0];
+            }
+            catch
+            {
+                f = null;
+            }
+
+            string varname;
+            if (prev == TokenType.LITERAL) // before operator was literal (variable name)
+            {
+                if (literals.Count == 0)
+                {
+                    varname = literals[0];
+                    f = Context.functionBuilder.GetLocal(varname).LocalType;
+                }
+                else
+                {
+                    varname = string.Join(".", literals);
+                }
+            }
+
             switch (needOperator)
             {
                 case OperatorType.ADD:
@@ -325,6 +348,20 @@ namespace TokensBuilder
                 case OperatorType.LTQ:
                     break;
                 case OperatorType.ASSIGN:
+                    if (literals.Count == 1)
+                    {
+                        try
+                        {
+                            gen.Emit(OpCodes.Stloc_S, Context.functionBuilder.localVariables[literals[0]]);
+                        }
+                        catch (KeyNotFoundException)
+                        {
+                            errors.Add(new VarNotFoundError(line, $"Local changable variable by name {literals[0]} not found"));
+                        }
+                    }
+                    else
+                    {
+                    }
                     break;
                 case OperatorType.ADDASSIGN:
                     break;

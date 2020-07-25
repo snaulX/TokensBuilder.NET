@@ -5,6 +5,7 @@ using System.Reflection;
 using TokensAPI;
 using TokensBuilder.Errors;
 using TokensStandart;
+using System.Linq;
 
 namespace TokensBuilder
 {
@@ -65,6 +66,23 @@ namespace TokensBuilder
             }
             return null;
         }
+
+        public static FieldInfo GetVarByName(string caller, string name, IEnumerable<string> namespaces)
+        {
+            return GetTypeByName(caller, namespaces).GetField(name);
+        }
+
+        public static FieldInfo GetVarByName(string name, IEnumerable<string> namespaces)
+        {
+            List<string> literals = name.Split('.').ToList();
+            name = literals.Last();
+            literals.RemoveAt(literals.Count - 1);
+            return GetVarByName(string.Join(".", literals), name, namespaces);
+        }
+
+        public static FieldInfo GetVarByName(string caller, string name) => GetVarByName(caller, name, gen.usingNamespaces);
+
+        public static FieldInfo GetVarByName(string name) => GetVarByName(name, gen.usingNamespaces);
 
 
         public static void CreateAssembly(bool autoAssemblyName = false)
