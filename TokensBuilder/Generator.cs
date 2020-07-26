@@ -246,7 +246,7 @@ namespace TokensBuilder
 
         private void ParseStatement()
         {
-            if (reader.bool_values.Peek())
+            if (reader.bool_values.Peek()) // open statement
             {
                 needEndStatement++;
                 if (prev == TokenType.LITERAL)
@@ -260,9 +260,14 @@ namespace TokensBuilder
                     isLoopStatement = true;
                 }
             }
-            else
+            else // close statement
             {
                 needEndStatement--;
+                if (prev == TokenType.LITERAL)
+                {
+                    AddLengthLiteral();
+                    LoadVar();
+                }
                 if (isFuncArgs)
                 {
                     EndParseArgsOfCallingMethod();
@@ -352,7 +357,7 @@ namespace TokensBuilder
                     {
                         try
                         {
-                            gen.Emit(OpCodes.Stloc_S, Context.functionBuilder.localVariables[literals[0]]);
+                            gen.Emit(OpCodes.Stloc, Context.functionBuilder.localVariables[literals[0]]);
                         }
                         catch (KeyNotFoundException)
                         {
@@ -527,6 +532,27 @@ namespace TokensBuilder
                     gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Peek());
                     break;
             }
+        }
+
+        private void LoadVar()
+        {
+            int ll = lengthLiterals.Peek();
+            List<string> _var = literals.GetRange(literals.Count - ll, ll);
+            if (_var.Count == 1)
+            {
+                // it`s local
+                LocalBuilder local = Context.functionBuilder.GetLocal(_var[0]);
+                parameterTypes.Peek().Add(local.LocalType);
+                gen.Emit(OpCodes.Ldloc, local);
+            }
+            else
+            {
+                // it`s field of some class or something else
+                FieldInfo field = Context.GetVarByName(string.Join(".", _var));
+                parameterTypes.Peek().Add(field.FieldType);
+                gen.Emit(OpCodes.Ldfld, field);
+            }
+            RemoveLastLiterals();
         }
         #endregion
 
