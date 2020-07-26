@@ -538,19 +538,36 @@ namespace TokensBuilder
         {
             int ll = lengthLiterals.Peek();
             List<string> _var = literals.GetRange(literals.Count - ll, ll);
+            string name;
             if (_var.Count == 1)
             {
                 // it`s local
-                LocalBuilder local = Context.functionBuilder.GetLocal(_var[0]);
-                parameterTypes.Peek().Add(local.LocalType);
-                gen.Emit(OpCodes.Ldloc, local);
+                name = _var[0];
+                LocalBuilder local = Context.functionBuilder.GetLocal(name);
+                if (local == null)
+                {
+                    errors.Add(new VarNotFoundError(line, $"Local variable with name '{name}' not found"));
+                }
+                else
+                {
+                    parameterTypes.Peek().Add(local.LocalType);
+                    gen.Emit(OpCodes.Ldloc, local);
+                }
             }
             else
             {
                 // it`s field of some class or something else
-                FieldInfo field = Context.GetVarByName(string.Join(".", _var));
-                parameterTypes.Peek().Add(field.FieldType);
-                gen.Emit(OpCodes.Ldfld, field);
+                name = string.Join(".", _var);
+                FieldInfo field = Context.GetVarByName(name);
+                if (field == null)
+                {
+                    errors.Add(new VarNotFoundError(line, $"Global variable with name '{name}' not found"));
+                }
+                else
+                {
+                    parameterTypes.Peek().Add(field.FieldType);
+                    gen.Emit(OpCodes.Ldfld, field);
+                }
             }
             RemoveLastLiterals();
         }

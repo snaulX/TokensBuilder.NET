@@ -52,7 +52,7 @@ namespace TokensBuilder
                         }
                     }
 
-                    gen.Emit(OpCodes.Brtrue_S, startLoop);
+                    gen.Emit(OpCodes.Brfalse_S, startLoop);
                 }
                 else
                 {
