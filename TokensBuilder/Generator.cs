@@ -51,6 +51,14 @@ namespace TokensBuilder
                 else return literals[curLiteralIndex];
             }
         }
+        private List<string> lastLiterals
+        {
+            get
+            {
+                int ll = lengthLiterals.Peek();
+                return literals.GetRange(literals.Count - ll, ll);
+            }
+        }
         private bool isFuncBody => !Context.functionBuilder.IsEmpty;
         private bool isFuncArgs => funcArgs > 0;
         private bool dontPop 
@@ -288,17 +296,19 @@ namespace TokensBuilder
                 f = null;
             }
 
-            string varname;
-            if (prev == TokenType.LITERAL) // before operator was literal (variable name)
+            // Check variables on use in operator
+            string varname = "";
+            if (literals.Count > 0) // before operator was literal (variable name)
             {
-                if (literals.Count == 0)
+                AddLengthLiteral();
+                if (lastLiterals.Count == 1)
                 {
                     varname = literals[0];
                     f = Context.functionBuilder.GetLocal(varname).LocalType;
                 }
                 else
                 {
-                    varname = string.Join(".", literals);
+                    varname = string.Join(".", lastLiterals);
                 }
             }
 
@@ -353,29 +363,29 @@ namespace TokensBuilder
                 case OperatorType.LTQ:
                     break;
                 case OperatorType.ASSIGN:
-                    if (literals.Count == 1)
+                    if (lastLiterals.Count == 1)
                     {
                         try
                         {
-                            gen.Emit(OpCodes.Stloc, Context.functionBuilder.localVariables[literals[0]]);
+                            gen.Emit(OpCodes.Stloc, Context.functionBuilder.localVariables[varname]);
                         }
                         catch (KeyNotFoundException)
                         {
-                            errors.Add(new VarNotFoundError(line, $"Local changable variable by name {literals[0]} not found"));
+                            errors.Add(new VarNotFoundError(line, $"Local changable variable by name {varname} not found"));
                         }
                     }
                     else
                     {
-                        string name = string.Join(".", literals);
                         try
                         {
-                            gen.Emit(OpCodes.Stfld, Context.GetVarByName(name));
+                            gen.Emit(OpCodes.Stfld, Context.GetVarByName(varname));
                         }
                         catch
                         {
-                            errors.Add(new VarNotFoundError(line, $"Global variable by name {name} not found"));
+                            errors.Add(new VarNotFoundError(line, $"Global variable by name {varname} not found"));
                         }
                     }
+                    RemoveLastLiterals();
                     break;
                 case OperatorType.ADDASSIGN:
                     break;
@@ -545,8 +555,7 @@ namespace TokensBuilder
 
         private void LoadVar()
         {
-            int ll = lengthLiterals.Peek();
-            List<string> _var = literals.GetRange(literals.Count - ll, ll);
+            List<string> _var = lastLiterals;
             string name;
             if (_var.Count == 1)
             {
