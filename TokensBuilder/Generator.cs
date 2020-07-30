@@ -366,6 +366,15 @@ namespace TokensBuilder
                     }
                     else
                     {
+                        string name = string.Join(".", literals);
+                        try
+                        {
+                            gen.Emit(OpCodes.Stfld, Context.GetVarByName(name));
+                        }
+                        catch
+                        {
+                            errors.Add(new VarNotFoundError(line, $"Global variable by name {name} not found"));
+                        }
                     }
                     break;
                 case OperatorType.ADDASSIGN:
@@ -593,7 +602,7 @@ namespace TokensBuilder
                 else
                     errors.Add(new InvalidTokenError(line, TokenType.LITERAL));
                 extends = false;
-                needEnd = true;
+                //needEnd = true;
             }
             else if (implements)
             {
@@ -657,6 +666,7 @@ namespace TokensBuilder
                         {
                             implements = false;
                             extends = false;
+                            initClass = false;
                             needEndBlock++;
                         }
                         else
@@ -710,14 +720,14 @@ namespace TokensBuilder
                         break;
                     case TokenType.SEPARATOR:
                         bool expression = reader.bool_values.Peek();
-                        if (expression)
+                        if (expression) // literal separator - .
                         {
                             if (literals.IsEmpty())
                             {
                                 errors.Add(new InvalidTokenError(line, "Expression separator cannot use without literals before him"));
                             }
                         }
-                        else
+                        else // expression separator - ,
                         {
                             literals.Clear();
                         }
@@ -801,12 +811,16 @@ namespace TokensBuilder
                         needEnd = true;
                         break;
                     case TokenType.IMPLEMENTS:
-                        //CheckOnAllClosed();
-                        implements = true;
+                        if (initClass)
+                            implements = true;
+                        else
+                            errors.Add(new NotInitClassError(line, "IMPLEMENTS token cannot be realize without class initilization"));
                         break;
                     case TokenType.EXTENDS:
-                        //CheckOnAllClosed();
-                        extends = true;
+                        if (initClass)
+                            extends = true;
+                        else
+                            errors.Add(new NotInitClassError(line, "EXTENDS token cannot be realize without class initilization"));
                         break;
                     case TokenType.INSTANCEOF:
                         break;

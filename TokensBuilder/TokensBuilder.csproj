@@ -64,6 +64,7 @@
     <Compile Include="Errors\InvalidTokenError.cs" />
     <Compile Include="Errors\InvalidVarTypeError.cs" />
     <Compile Include="Errors\NeedEndError.cs" />
+    <Compile Include="Errors\NotInitClassError.cs" />
     <Compile Include="Errors\PlatformImplementationError.cs" />
     <Compile Include="Errors\TokensLibraryError.cs" />
     <Compile Include="Errors\TypeNotFoundError.cs" />

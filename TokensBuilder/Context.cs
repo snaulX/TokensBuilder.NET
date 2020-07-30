@@ -145,10 +145,11 @@ namespace TokensBuilder
             check_var:
             string name = gen.reader.string_values.Peek();
             gen.reader.tokens.RemoveAt(0); // remove name
+            LocalBuilder local = functionBuilder.DeclareLocal(typeName);
             if (varType == VarType.CONST || varType == VarType.FINAL)
-                functionBuilder.localFinals.Add(name, functionBuilder.DeclareLocal(typeName));
+                functionBuilder.localFinals.Add(name, local);
             else if (varType == VarType.DEFAULT)
-                functionBuilder.localVariables.Add(name, functionBuilder.DeclareLocal(typeName));
+                functionBuilder.localVariables.Add(name, local);
             else
                 gen.errors.Add(new InvalidVarTypeError(gen.line, $"Type of variable {varType} is not valid for local variables"));
             TokenType curtoken = gen.reader.tokens.Peek();
@@ -166,10 +167,7 @@ namespace TokensBuilder
                     while (curtoken != TokenType.SEPARATOR || curtoken != TokenType.EXPRESSION_END);
                     if (gen.parameterTypes.Pop()[0] != GetTypeByName(typeName))
                         gen.errors.Add(new TokensError(gen.line, "Type of value not equals type of variable"));
-                    if (varType == VarType.CONST || varType == VarType.FINAL)
-                        functionBuilder.generator.Emit(OpCodes.Stloc_S, functionBuilder.localFinals[name]); // save getted value
-                    else if (varType == VarType.DEFAULT)
-                        functionBuilder.generator.Emit(OpCodes.Stloc_S, functionBuilder.localVariables[name]); // save getted value
+                    functionBuilder.generator.Emit(OpCodes.Stloc, local); // save getted value
                     if (curtoken == TokenType.SEPARATOR)
                     {
                         if (gen.reader.bool_values.Peek())
@@ -191,7 +189,7 @@ namespace TokensBuilder
             }
             else if (curtoken == TokenType.SEPARATOR)
             {
-                if (gen.reader.bool_values.Peek())
+                if (!gen.reader.bool_values.Peek())
                     goto check_var;
                 else
                     gen.errors.Add(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
