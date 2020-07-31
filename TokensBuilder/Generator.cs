@@ -36,7 +36,7 @@ namespace TokensBuilder
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
             needSeparator = false, needReturn = false, needAssign = false, initClass = false, isParams = false,
             isFuncAlias = false, isTypeAlias = false, isCtor = false, needBlock = false;
-        private int curLiteralIndex = 0, funcArgs = 0;
+        private int curLiteralIndex = 0, funcArgs = 0, classDefinition = 0;
         private Stack<int> lengthLiterals = new Stack<int>();
         private OperatorType? needOperator = null;
         private Stack<Loop> loops = new Stack<Loop>();
@@ -59,8 +59,9 @@ namespace TokensBuilder
                 return literals.GetRange(literals.Count - ll, ll);
             }
         }
-        private bool isFuncBody => !Context.functionBuilder.IsEmpty;
+        private bool isFuncBody => Context.functionBuilder != null && !Context.functionBuilder.IsEmpty;
         private bool isFuncArgs => funcArgs > 0;
+        private bool isClassDefinition => classDefinition > 0;
         private bool dontPop 
         {
             get => needAssign || needReturn || isFuncArgs || putLoopStatement;
@@ -656,6 +657,8 @@ namespace TokensBuilder
                             new ClassBuilder(reader.string_values.Peek(), currentNamespace,
                             reader.class_types.Peek(), reader.securities.Peek());
                         initClass = true;
+                        if (isFuncBody)
+                            Context.functionBuilder.End();
                         break;
                     case TokenType.FUNCTION:
                         Context.CreateMethod();
@@ -673,10 +676,14 @@ namespace TokensBuilder
                     case TokenType.BLOCK:
                         if (reader.bool_values.Peek())
                         {
-                            implements = false;
-                            extends = false;
-                            initClass = false;
                             needEndBlock++;
+                            if (initClass)
+                            {
+                                initClass = false;
+                                classDefinition = needEndBlock;
+                                implements = false;
+                                extends = false;
+                            }
                         }
                         else
                         {
@@ -697,9 +704,10 @@ namespace TokensBuilder
                                 gen.Emit(OpCodes.Ret);
                                 Context.classBuilder.methodBuilder = null;
                             }
-                            else if (!Context.classBuilder.IsEmpty)
+                            else if (classDefinition == needEndBlock)
                             {
                                 Context.classBuilder.End();
+                                classDefinition = 0;
                             }
                             needEndBlock--;
                         }

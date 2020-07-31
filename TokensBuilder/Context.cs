@@ -120,8 +120,6 @@ namespace TokensBuilder
             string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
             gen.reader.tokens.RemoveAt(0); // remove name
             gen.reader.tokens.RemoveAt(0); // remove name of type
-            Console.WriteLine(typeName);
-            Console.WriteLine(name);
             FieldAttributes fieldAttributes;
             SecurityDegree security = gen.reader.securities.Peek();
             if (security == SecurityDegree.PUBLIC) fieldAttributes = FieldAttributes.Public;

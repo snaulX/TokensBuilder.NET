@@ -98,7 +98,7 @@ namespace TokensBuilder
             else return false;
         }
 
-        public FunctionBuilder CreateMethod(string name, string typeName = "", FuncType type = FuncType.DEFAULT,
+        internal FunctionBuilder CreateMethod(string name, string typeName = "", FuncType type = FuncType.DEFAULT,
             SecurityDegree security = SecurityDegree.PUBLIC)
         {
             MethodAttributes attributes;
