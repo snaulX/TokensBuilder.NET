@@ -33,6 +33,7 @@ namespace TokensBuilder
             if (classType == ClassType.DEFAULT) typeAttributes = TypeAttributes.Class;
             else if (classType == ClassType.FINAL) typeAttributes |= TypeAttributes.Sealed;
             else if (classType == ClassType.INTERFACE) typeAttributes = TypeAttributes.Interface;
+            else if (classType == ClassType.TYPEALIAS) typeBuilder.SetCustomAttribute(Context.typeAliasAttr);
 
             //select security of class
             if (securityDegree == SecurityDegree.PRIVATE) typeAttributes |= TypeAttributes.NotPublic;

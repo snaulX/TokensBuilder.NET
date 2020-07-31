@@ -876,7 +876,6 @@ namespace TokensBuilder
                 return;
             }
             tokensReader.GetHeaderAndTarget(out byte header, out _);
-            if (header != 5) throw new InvalidHeaderException(header);
             reader.ReadTokens();
             reader.EndWork();
             reader.Add(tokensReader);

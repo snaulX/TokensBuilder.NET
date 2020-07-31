@@ -26,7 +26,9 @@ namespace TokensBuilder
         public static readonly CustomAttributeBuilder entrypointAttr = new CustomAttributeBuilder(
                         typeof(EntrypointAttribute).GetConstructor(Type.EmptyTypes), new object[] { }),
             scriptAttr = new CustomAttributeBuilder(
-                        typeof(ScriptAttribute).GetConstructor(Type.EmptyTypes), new object[] { });
+                        typeof(ScriptAttribute).GetConstructor(Type.EmptyTypes), new object[] { }),
+            typeAliasAttr = new CustomAttributeBuilder(
+                typeof(TypeAliasAttributte).GetConstructor(Type.EmptyTypes), new object[] { });
         public static Dictionary<string, object> constants = new Dictionary<string, object>();
         public static List<MethodInfo> scriptFunctions = new List<MethodInfo>();
 
@@ -38,6 +40,27 @@ namespace TokensBuilder
                     return func;
             }
             return null;
+        }
+
+        public static CustomAttributeBuilder FindAttribute(IEnumerable<string> namespaces)
+        {
+            string attributeName = gen.reader.string_values.Peek();
+            Type[] ctorTypes = Type.EmptyTypes;
+            object[] args = new object[] { };
+            if (gen.reader.tokens[0] == TokenType.STATEMENT)
+            {
+                gen.reader.tokens.RemoveAt(0);
+                if (gen.reader.bool_values.Peek())
+                {
+                    //pass
+                }
+                else
+                {
+                    TokensBuilder.Error(new NeedEndError(gen.line, "Extra closing bracket in attribute"));
+                }
+            }
+            return new CustomAttributeBuilder(
+                GetTypeByName(attributeName, namespaces).GetConstructor(ctorTypes), args); //it`s a pass
         }
 
         public static Type GetTypeByName(string name) => GetTypeByName(name, gen.usingNamespaces);
@@ -117,20 +140,70 @@ namespace TokensBuilder
 
         public static void CreateField()
         {
-            string typeName = gen.reader.string_values.Peek(), name = gen.reader.string_values.Peek();
-            gen.reader.tokens.RemoveAt(0); // remove name
+            string typeName = gen.reader.string_values.Peek();
             gen.reader.tokens.RemoveAt(0); // remove name of type
-            FieldAttributes fieldAttributes;
+            VarType varType = gen.reader.var_types.Peek();
             SecurityDegree security = gen.reader.securities.Peek();
+            FieldAttributes fieldAttributes;
             if (security == SecurityDegree.PUBLIC) fieldAttributes = FieldAttributes.Public;
             else if (security == SecurityDegree.PRIVATE) fieldAttributes = FieldAttributes.Private;
             else if (security == SecurityDegree.INTERNAL) fieldAttributes = FieldAttributes.Assembly;
             else fieldAttributes = FieldAttributes.Family;
-            VarType varType = gen.reader.var_types.Peek();
             if (varType == VarType.CONST) fieldAttributes |= FieldAttributes.Literal | FieldAttributes.HasDefault | FieldAttributes.Static;
             else if (varType == VarType.FINAL) fieldAttributes |= FieldAttributes.InitOnly;
             else if (varType == VarType.STATIC) fieldAttributes |= FieldAttributes.Static;
+
+            check_var:
+            string name = gen.reader.string_values.Peek();
+            gen.reader.tokens.RemoveAt(0); // remove name
             classBuilder.DefineField(name, typeName, fieldAttributes);
+
+            TokenType curtoken = gen.reader.tokens.Peek();
+            if (curtoken == TokenType.OPERATOR)
+            {
+                OperatorType optype = gen.reader.operators.Peek();
+                if (optype == OperatorType.ASSIGN)
+                {
+                    gen.parameterTypes.Push(new List<Type>()); // create new parameter types for value
+                    curtoken = gen.reader.tokens.Peek();
+                    do
+                    {
+                        gen.ParseToken(curtoken);
+                    }
+                    while (curtoken != TokenType.SEPARATOR || curtoken != TokenType.EXPRESSION_END);
+                    if (gen.parameterTypes.Pop()[0] != GetTypeByName(typeName))
+                        TokensBuilder.Error(new TokensError(gen.line, "Type of value not equals type of variable"));
+                    functionBuilder.generator.Emit(OpCodes.Stloc, classBuilder.fieldBuilder); // save getted value
+                    if (curtoken == TokenType.SEPARATOR)
+                    {
+                        if (gen.reader.bool_values.Peek())
+                            goto check_var;
+                        else
+                            TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
+                    }
+                    else // EXPRESSION_END
+                    {
+                        return;
+                    }
+                }
+                else
+                    TokensBuilder.Error(new InvalidOperatorError(gen.line, $"Operator {optype} cannot be after variable declaration"));
+            }
+            else if (curtoken == TokenType.EXPRESSION_END)
+            {
+                return;
+            }
+            else if (curtoken == TokenType.SEPARATOR)
+            {
+                if (!gen.reader.bool_values.Peek())
+                    goto check_var;
+                else
+                    TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
+            }
+            else
+            {
+                TokensBuilder.Error(new InvalidTokenError(gen.line, $"Invalid token {curtoken} after variable definition"));
+            }
         }
 
         public static void CreateLocal()
@@ -149,7 +222,7 @@ namespace TokensBuilder
             else if (varType == VarType.DEFAULT)
                 functionBuilder.localVariables.Add(name, local);
             else
-                gen.errors.Add(new InvalidVarTypeError(gen.line, $"Type of variable {varType} is not valid for local variables"));
+                TokensBuilder.Error(new InvalidVarTypeError(gen.line, $"Type of variable {varType} is not valid for local variables"));
             TokenType curtoken = gen.reader.tokens.Peek();
             if (curtoken == TokenType.OPERATOR)
             {
@@ -164,14 +237,14 @@ namespace TokensBuilder
                     }
                     while (curtoken != TokenType.SEPARATOR || curtoken != TokenType.EXPRESSION_END);
                     if (gen.parameterTypes.Pop()[0] != GetTypeByName(typeName))
-                        gen.errors.Add(new TokensError(gen.line, "Type of value not equals type of variable"));
+                        TokensBuilder.Error(new TokensError(gen.line, "Type of value not equals type of variable"));
                     functionBuilder.generator.Emit(OpCodes.Stloc, local); // save getted value
                     if (curtoken == TokenType.SEPARATOR)
                     {
                         if (gen.reader.bool_values.Peek())
                             goto check_var;
                         else
-                            gen.errors.Add(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
+                            TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
                     }
                     else // EXPRESSION_END
                     {
@@ -179,7 +252,7 @@ namespace TokensBuilder
                     }
                 }
                 else
-                    gen.errors.Add(new InvalidOperatorError(gen.line, $"Operator {optype} cannot be after variable declaration"));
+                    TokensBuilder.Error(new InvalidOperatorError(gen.line, $"Operator {optype} cannot be after variable declaration"));
             }
             else if (curtoken == TokenType.EXPRESSION_END)
             {
@@ -190,11 +263,11 @@ namespace TokensBuilder
                 if (!gen.reader.bool_values.Peek())
                     goto check_var;
                 else
-                    gen.errors.Add(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
+                    TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
             }
             else
             {
-                gen.errors.Add(new InvalidTokenError(gen.line, $"Invalid token {curtoken} after variable definition"));
+                TokensBuilder.Error(new InvalidTokenError(gen.line, $"Invalid token {curtoken} after variable definition"));
             }
         }
 
@@ -205,27 +278,6 @@ namespace TokensBuilder
             SecurityDegree security = gen.reader.securities.Peek();
             classBuilder.CreateMethod(name, typeName, funcType, security);
             return funcType;
-        }
-
-        public static CustomAttributeBuilder FindAttribute(IEnumerable<string> namespaces)
-        {
-            string attributeName = gen.reader.string_values.Peek();
-            Type[] ctorTypes = Type.EmptyTypes;
-            object[] args = new object[] { };
-            if (gen.reader.tokens[0] == TokenType.STATEMENT)
-            {
-                gen.reader.tokens.RemoveAt(0);
-                if (gen.reader.bool_values.Peek())
-                {
-                    //pass
-                }
-                else
-                {
-                    TokensBuilder.Error(new NeedEndError(gen.line, "Extra closing bracket in attribute"));
-                }
-            }
-            return new CustomAttributeBuilder(
-                GetTypeByName(attributeName, namespaces).GetConstructor(ctorTypes), args); //it`s a pass
         }
 
         public static void Finish()
