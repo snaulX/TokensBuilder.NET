@@ -73,6 +73,7 @@
     <Compile Include="Generator.cs" />
     <Compile Include="HeaderType.cs" />
     <Compile Include="Loop.cs" />
+    <Compile Include="TokensTemplate.cs" />
     <Compile Include="WhileLoop.cs" />
     <Compile Include="TokensBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

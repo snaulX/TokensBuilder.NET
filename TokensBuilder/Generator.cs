@@ -120,15 +120,10 @@ namespace TokensBuilder
                 if (curToken == TokenType.LITERAL)
                 {
                     if (Config.header == HeaderType.CLASS)
-                    {
                         Context.mainClass.Extends(reader.string_values.Peek());
-                    }
                     else
-                    {
                         errors.Add(new InvalidHeaderError(line, Config.header, "extends directive can be only with class header"));
-                    }
                 }
-
                 else
                 {
                     errors.Add(new InvalidTokenError(line, curToken));
@@ -286,7 +281,7 @@ namespace TokensBuilder
 
         private void ParseOperator()
         {
-            // First values in stack
+            #region First values in stack
             Type f;
             try
             {
@@ -296,8 +291,9 @@ namespace TokensBuilder
             {
                 f = null;
             }
+            #endregion
 
-            // Check variables on use in operator
+            #region Check variables on use in operator
             string varname = "";
             if (literals.Count > 0) // before operator was literal (variable name)
             {
@@ -312,6 +308,7 @@ namespace TokensBuilder
                     varname = string.Join(".", lastLiterals);
                 }
             }
+            #endregion
 
             switch (needOperator)
             {
@@ -752,7 +749,6 @@ namespace TokensBuilder
                     case TokenType.EXPRESSION_END:
                         if (initClass)
                             Context.classBuilder.End();
-
                         literals.Clear();
                         curLiteralIndex = 0;
                         initClass = false;
@@ -788,6 +784,8 @@ namespace TokensBuilder
                         isDirective = true;
                         break;
                     case TokenType.NEW:
+                        gen.Emit(OpCodes.Newobj,
+                            Context.GetTypeByName(string.Join(".", lastLiterals)).GetConstructor(Type.EmptyTypes));
                         break;
                     case TokenType.ANNOTATION:
                         break;
@@ -868,14 +866,14 @@ namespace TokensBuilder
             try
             {
                 if (path.StartsWith("<")) tokensReader.SetPath(path.Remove(path.Length - 2) + ".tokens");
-                else tokensReader.SetPath(AppDomain.CurrentDomain.BaseDirectory + path + ".tokens");
+                else tokensReader.SetPath(AppDomain.CurrentDomain.BaseDirectory + "lib/" + path + ".tokens");
             }
             catch
             {
                 errors.Add(new TokensLibraryError(line, $"Tokens library by path {path} not found"));
                 return;
             }
-            tokensReader.GetHeaderAndTarget(out byte header, out _);
+            tokensReader.GetHeaderAndTarget(out _, out _);
             reader.ReadTokens();
             reader.EndWork();
             reader.Add(tokensReader);
