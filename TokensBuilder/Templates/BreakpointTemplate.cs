@@ -1,18 +1,19 @@
 ﻿using System.Collections.Generic;
+using System.Reflection.Emit;
 using TokensAPI;
 
 namespace TokensBuilder.Templates
 {
-    class UseTemplate : TokensTemplate
+    class BreakpointTemplate : TokensTemplate
     {
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            return expression_end && expression.tokens == new List<TokenType> { TokenType.USING_NAMESPACE };
+            return expression_end && expression.tokens == new List<TokenType> { TokenType.BREAKPOINT };
         }
 
         public List<TokensError> Run(TokensReader expression)
         {
-            TokensBuilder.gen.usingNamespaces.Add(expression.string_values.Peek());
+            Context.functionBuilder.generator.Emit(OpCodes.Break);
             return new List<TokensError>();
         }
     }

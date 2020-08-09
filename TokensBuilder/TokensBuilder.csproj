@@ -73,7 +73,11 @@
     <Compile Include="Generator.cs" />
     <Compile Include="HeaderType.cs" />
     <Compile Include="Loop.cs" />
+    <Compile Include="Templates\BreakpointTemplate.cs" />
     <Compile Include="Templates\IncludeTemplate.cs" />
+    <Compile Include="Templates\LibTemplate.cs" />
+    <Compile Include="Templates\NamespaceTemplate.cs" />
+    <Compile Include="Templates\UseTemplate.cs" />
     <Compile Include="TokensTemplate.cs" />
     <Compile Include="WhileLoop.cs" />
     <Compile Include="TokensBuilder.cs" />

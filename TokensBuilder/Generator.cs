@@ -170,6 +170,9 @@ namespace TokensBuilder
             });
             strongTemplates.Add(TokenType.INCLUDE, new IncludeTemplate());
             strongTemplates.Add(TokenType.USING_NAMESPACE, new UseTemplate());
+            strongTemplates.Add(TokenType.IMPORT_LIBRARY, new LibTemplate());
+            strongTemplates.Add(TokenType.NAMESPACE, new NamespaceTemplate());
+            strongTemplates.Add(TokenType.BREAKPOINT, new BreakpointTemplate());
             reader = new TokensReader();
         }
 
