@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
 using TokensBuilder.Errors;
+using TokensBuilder.Templates;
 
 namespace TokensBuilder
 {
@@ -41,6 +42,8 @@ namespace TokensBuilder
         private OperatorType? needOperator = null;
         private Stack<Loop> loops = new Stack<Loop>();
         private byte insertOp = 2;
+        private Dictionary<TokenType, TokensTemplate> strongTemplates = new Dictionary<TokenType, TokensTemplate>();
+        private List<TokensTemplate> flexTemplates = new List<TokensTemplate>();
 
         //properties
         private string curLiteral
@@ -165,6 +168,8 @@ namespace TokensBuilder
             {
                 tryDirective = false;
             });
+            strongTemplates.Add(TokenType.INCLUDE, new IncludeTemplate());
+            strongTemplates.Add(TokenType.USING_NAMESPACE, new UseTemplate());
             reader = new TokensReader();
         }
 
