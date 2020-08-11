@@ -10,8 +10,9 @@ namespace TokensBuilder.Templates
     public static class PartTemplate
     {
         static uint line => TokensBuilder.gen.line;
+        public static List<TokensError> errors = new List<TokensError>();
 
-        public static FieldInfo ParseVar(ref TokensReader expression, out List<TokensError> errors)
+        public static FieldInfo ParseVar(ref TokensReader expression)
         {
             errors = new List<TokensError>();
             TokenType token = expression.tokens.Peek();
@@ -61,6 +62,20 @@ namespace TokensBuilder.Templates
                 expression.tokens.Insert(0, token);
             }
             return null;
+        }
+
+        public static bool ParseCallMethod(ref TokensReader expression)
+        {
+            errors = new List<TokensError>();
+            return false;
+        }
+
+        public static Type ParseValue(ref TokensReader expression, out object value)
+        {
+            Type type = null;
+            value = null;
+            errors = new List<TokensError>();
+            return type;
         }
     }
 }
