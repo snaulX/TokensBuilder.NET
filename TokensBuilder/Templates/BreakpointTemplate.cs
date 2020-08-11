@@ -8,7 +8,8 @@ namespace TokensBuilder.Templates
     {
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            return expression_end && expression.tokens == new List<TokenType> { TokenType.BREAKPOINT };
+            return expression_end && expression.tokens[0] == TokenType.BREAKPOINT
+                && expression.tokens.Count == 1;
         }
 
         public List<TokensError> Run(TokensReader expression)

@@ -10,7 +10,8 @@ namespace TokensBuilder.Templates
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            return expression_end && expression.tokens == new List<TokenType> { TokenType.IMPORT_LIBRARY };
+            return expression_end && expression.tokens[0] == TokenType.IMPORT_LIBRARY
+                && expression.tokens.Count == 1;
         }
 
         public List<TokensError> Run(TokensReader expression)

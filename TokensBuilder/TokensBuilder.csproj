@@ -62,6 +62,7 @@
     <Compile Include="Errors\InvalidOperatorError.cs" />
     <Compile Include="Errors\InvalidOutTypeError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
+    <Compile Include="Errors\InvalidTokensTemplateError.cs" />
     <Compile Include="Errors\InvalidVarTypeError.cs" />
     <Compile Include="Errors\NeedEndError.cs" />
     <Compile Include="Errors\NotInitClassError.cs" />

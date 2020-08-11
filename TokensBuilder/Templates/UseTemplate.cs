@@ -7,7 +7,8 @@ namespace TokensBuilder.Templates
     {
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            return expression_end && expression.tokens == new List<TokenType> { TokenType.USING_NAMESPACE };
+            return expression_end && expression.tokens[0] == TokenType.USING_NAMESPACE
+                && expression.tokens.Count == 1;
         }
 
         public List<TokensError> Run(TokensReader expression)

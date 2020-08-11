@@ -185,7 +185,8 @@ namespace TokensBuilder
             reader.EndWork();
             while (reader.tokens.Count > 0)
             {
-                if (tryDirective)
+                ParseExpression();
+                /*if (tryDirective)
                 {
                     //int errlen = errors.Count;
                     Generator backup = this;
@@ -239,7 +240,7 @@ namespace TokensBuilder
                     TokenType tt = reader.tokens.Peek();
                     ParseToken(tt);
                     prev = tt;
-                }
+                }*/
             }
             CheckOnAllClosed();
             foreach (TokensError error in errors)
@@ -874,25 +875,95 @@ namespace TokensBuilder
         /// </summary>
         public void ParseExpression()
         {
-            List<TokenType> expression = new List<TokenType>();
-            TokenType token = reader.tokens.Peek();
-            while (token != TokenType.EXPRESSION_END || token != TokenType.BLOCK)
+            TokensReader expression = new TokensReader();
+            bool exprend = true;
+            int i = 0;
+            foreach (TokenType token in reader.tokens)
             {
-                expression.Add(token);
-                token = reader.tokens.Peek();
+                i++;
+                if (token == TokenType.EXPRESSION_END || token == TokenType.BLOCK)
+                {
+                    if (token == TokenType.EXPRESSION_END) exprend = true;
+                    else exprend = false;
+                    break;
+                }
+                if (token != TokenType.NEWLN) expression.tokens.Add(token);
+                else line++;
+                if (token == TokenType.CLASS)
+                {
+                    expression.string_values.Add(reader.string_values.Peek());
+                    expression.class_types.Add(reader.class_types.Peek());
+                    expression.securities.Add(reader.securities.Peek());
+                }
+                else if (token == TokenType.FUNCTION)
+                {
+                    expression.string_values.Add(reader.string_values.Peek());
+                    expression.string_values.Add(reader.string_values.Peek());
+                    expression.function_types.Add(reader.function_types.Peek());
+                    expression.securities.Add(reader.securities.Peek());
+                }
+                else if (token == TokenType.VAR)
+                {
+                    expression.var_types.Add(reader.var_types.Peek());
+                    expression.securities.Add(reader.securities.Peek());
+                }
+                else if (token == TokenType.STATEMENT || token == TokenType.SEQUENCE || token == TokenType.SEPARATOR
+                    || token == TokenType.RETURN || token == TokenType.LAMBDA || token == TokenType.ASYNC
+                    || token == TokenType.PARAMETER_TYPE || token == TokenType.GENERIC || token == TokenType.ACTUAL)
+                {
+                    expression.bool_values.Add(reader.bool_values.Peek());
+                }
+                else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.NAMESPACE
+                    || token == TokenType.IMPORT_LIBRARY || token == TokenType.INCLUDE || token == TokenType.USING_NAMESPACE
+                    || token == TokenType.INSTANCEOF || token == TokenType.GOTO || token == TokenType.LABEL)
+                {
+                    expression.string_values.Add(reader.string_values.Peek());
+                }
+                else if (token == TokenType.LOOP)
+                {
+                    expression.loops.Add(reader.loops.Peek());
+                }
+                else if (token == TokenType.LOOP_OPERATOR)
+                {
+                    expression.bool_values.Add(reader.bool_values.Peek());
+                    expression.string_values.Add(reader.string_values.Peek());
+                }
+                else if (token == TokenType.OPERATOR)
+                {
+                    expression.operators.Add(reader.operators.Peek());
+                }
+                else if (token == TokenType.VALUE)
+                {
+                    expression.byte_values.Add(reader.byte_values.Peek());
+                    expression.values.Add(reader.values.Peek());
+                }
             }
-            bool exprend = token == TokenType.EXPRESSION_END;
+            reader.tokens.RemoveRange(0, i);
+            if (!exprend)
+            {
+                if (reader.bool_values.Peek()) needEndBlock++;
+                else needEndBlock--;
+            }
             try
             {
-                TokensTemplate template = strongTemplates[expression[0]];
+                if (expression.tokens.Count == 0) return;
+                TokensTemplate template = strongTemplates[expression.tokens[0]];
+                if (template.Parse(expression, exprend))
+                    template.Run(expression);
+                else
+                    errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
             }
             catch (KeyNotFoundException)
             {
                 foreach (TokensTemplate template in flexTemplates)
                 {
-                    //if (template.Parse(expression, exprend))
-                        //template.Run(expression);
+                    if (template.Parse(expression, exprend))
+                    {
+                        template.Run(expression);
+                        return;
+                    }
                 }
+                errors.Add(new InvalidTokensTemplateError(line, "Unknown tokens template"));
             }
         }
 
