@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Text;
 using TokensAPI;
 using TokensBuilder.Errors;
@@ -100,13 +98,9 @@ namespace TokensBuilder.Templates
             {
                 method = Context.GetTypeByName(typename).GetMethod(methname, paramTypes.ToArray());
                 if (method == null)
-                    errors.Add(new InvalidMethodError(line, $"Method with name {typename+methname} not found"));
+                    errors.Add(new InvalidMethodError(line, $"Method with name {typename + methname} not found"));
                 else
-                {
-                    foreach (object par in parameters)
-                        Context.LoadObject(par);
-                    Context.functionBuilder.generator.Emit(OpCodes.Call, method);
-                }
+                    Context.CallMethod(method, parameters);
             }
             catch (NullReferenceException)
             {

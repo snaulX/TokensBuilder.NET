@@ -869,6 +869,33 @@ namespace TokensBuilder
             }
         }
 
+        /// <summary>
+        /// Get expression and parse it
+        /// </summary>
+        public void ParseExpression()
+        {
+            List<TokenType> expression = new List<TokenType>();
+            TokenType token = reader.tokens.Peek();
+            while (token != TokenType.EXPRESSION_END || token != TokenType.BLOCK)
+            {
+                expression.Add(token);
+                token = reader.tokens.Peek();
+            }
+            bool exprend = token == TokenType.EXPRESSION_END;
+            try
+            {
+                TokensTemplate template = strongTemplates[expression[0]];
+            }
+            catch (KeyNotFoundException)
+            {
+                foreach (TokensTemplate template in flexTemplates)
+                {
+                    //if (template.Parse(expression, exprend))
+                        //template.Run(expression);
+                }
+            }
+        }
+
         public void ParseTokensLibrary(string path)
         {
             TokensReader tokensReader = new TokensReader();

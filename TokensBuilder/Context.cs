@@ -315,6 +315,13 @@ namespace TokensBuilder
             else if (value is string str)
                 ilg.Emit(OpCodes.Ldstr, str);
         }
+
+        public static void CallMethod(MethodInfo method, List<object> pars)
+        {
+            foreach (object par in pars)
+                LoadObject(par);
+            ilg.Emit(OpCodes.Call, method);
+        }
         #endregion
 
         public static void Finish()
