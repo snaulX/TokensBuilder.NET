@@ -11,6 +11,7 @@ namespace TokensBuilder
 {
     public static class Context
     {
+        #region Propeties and fields
         public static AssemblyBuilder assemblyBuilder = null;
         public static AssemblyName assemblyName = new AssemblyName();
         public static ModuleBuilder moduleBuilder = null;
@@ -31,7 +32,9 @@ namespace TokensBuilder
                 typeof(TypeAliasAttributte).GetConstructor(Type.EmptyTypes), new object[] { });
         public static Dictionary<string, object> constants = new Dictionary<string, object>();
         public static List<MethodInfo> scriptFunctions = new List<MethodInfo>();
+        #endregion
 
+        #region 'Find' methods
         public static MethodInfo FindScriptFunction(string name)
         {
             foreach (MethodInfo func in scriptFunctions)
@@ -62,7 +65,9 @@ namespace TokensBuilder
             return new CustomAttributeBuilder(
                 GetTypeByName(attributeName, namespaces).GetConstructor(ctorTypes), args); //it`s a pass
         }
+        #endregion
 
+        #region 'Get' methods
         public static Type GetTypeByName(string name) => GetTypeByName(name, gen.usingNamespaces);
 
         public static Type GetTypeByName(string name, IEnumerable<string> namespaces)
@@ -106,8 +111,9 @@ namespace TokensBuilder
         public static FieldInfo GetVarByName(string caller, string name) => GetVarByName(caller, name, gen.usingNamespaces);
 
         public static FieldInfo GetVarByName(string name) => GetVarByName(name, gen.usingNamespaces);
+        #endregion
 
-
+        #region 'Create' methods
         public static void CreateAssembly(bool autoAssemblyName = false)
         {
             if (Config.header == HeaderType.LIBRARY) Config.outputType = PEFileKinds.Dll;
@@ -279,6 +285,7 @@ namespace TokensBuilder
             classBuilder.CreateMethod(name, typeName, funcType, security);
             return funcType;
         }
+        #endregion
 
         public static void Finish()
         {
