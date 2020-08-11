@@ -24,6 +24,7 @@ namespace TokensBuilder
         }
         public static FunctionBuilder functionBuilder => classBuilder.methodBuilder;
         private static Generator gen => TokensBuilder.gen;
+        private static ILGenerator ilg => functionBuilder.generator;
         public static readonly CustomAttributeBuilder entrypointAttr = new CustomAttributeBuilder(
                         typeof(EntrypointAttribute).GetConstructor(Type.EmptyTypes), new object[] { }),
             scriptAttr = new CustomAttributeBuilder(
@@ -284,6 +285,35 @@ namespace TokensBuilder
             SecurityDegree security = gen.reader.securities.Peek();
             classBuilder.CreateMethod(name, typeName, funcType, security);
             return funcType;
+        }
+        #endregion
+
+        #region Methods for manipulations with ILGenerator
+        public static void LoadObject(object value)
+        {
+            if (value == null)
+                ilg.Emit(OpCodes.Ldnull);
+            else if (value is sbyte b)
+                ilg.Emit(OpCodes.Ldc_I4_S, b);
+            else if (value is short s)
+                ilg.Emit(OpCodes.Ldc_I4, s);
+            else if (value is int i)
+                ilg.Emit(OpCodes.Ldc_I4, i);
+            else if (value is float f)
+                ilg.Emit(OpCodes.Ldc_R4, f);
+            else if (value is long l)
+                ilg.Emit(OpCodes.Ldc_I8, l);
+            else if (value is double d)
+                ilg.Emit(OpCodes.Ldc_R8, d);
+            else if (value is bool bl)
+            {
+                if (bl) ilg.Emit(OpCodes.Ldc_I4_1);
+                else ilg.Emit(OpCodes.Ldc_I4_0);
+            }
+            else if (value is char c)
+                ilg.Emit(OpCodes.Ldc_I4, c);
+            else if (value is string str)
+                ilg.Emit(OpCodes.Ldstr, str);
         }
         #endregion
 

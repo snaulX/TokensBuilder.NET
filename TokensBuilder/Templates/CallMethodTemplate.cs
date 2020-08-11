@@ -1,35 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using TokensAPI;
+using TokensBuilder.Errors;
 
 namespace TokensBuilder.Templates
 {
     class CallMethodTemplate : TokensTemplate
     {
-        string methname = "";
+        private uint line => TokensBuilder.gen.line;
+        string typename = "", methname = "";
         List<Type> paramTypes = new List<Type>();
         List<object> parameters = new List<object>();
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
+            if (!expression_end) 
+                return false;
+
             parameters = new List<object>();
             paramTypes = new List<Type>();
             methname = "";
+            typename = "";
             TokenType token = expression.tokens.Peek();
             if (token == TokenType.LITERAL)
             {
                 bool mustLiteral = true;
-                StringBuilder callMethName = new StringBuilder();
+                StringBuilder parentName = new StringBuilder();
+                string lastLiteral = "";
                 while (token == TokenType.LITERAL || token == TokenType.SEPARATOR)
                 {
                     if (mustLiteral && token == TokenType.LITERAL)
-                        callMethName.Append(expression.string_values.Peek());
+                        lastLiteral = expression.string_values.Peek();
                     else if (!mustLiteral && token == TokenType.SEPARATOR)
                     {
                         if (expression.bool_values.Peek())
-                            callMethName.Append(".");
+                            parentName.Append(lastLiteral + ".");
                         else
                             break;
                     }
@@ -41,7 +50,9 @@ namespace TokensBuilder.Templates
                     return false;
                 else
                 {
-                    methname = callMethName.ToString();
+                    parentName.Length--; // delete last character - '.'
+                    typename = parentName.ToString();
+                    methname = lastLiteral;
                     if (token == TokenType.STATEMENT && expression.bool_values.Peek())
                     {
                         token = expression.tokens.Peek();
@@ -83,7 +94,31 @@ namespace TokensBuilder.Templates
 
         public List<TokensError> Run(TokensReader expression)
         {
-            throw new NotImplementedException();
+            List<TokensError> errors = new List<TokensError>();
+            MethodInfo method;
+            try
+            {
+                method = Context.GetTypeByName(typename).GetMethod(methname, paramTypes.ToArray());
+                if (method == null)
+                    errors.Add(new InvalidMethodError(line, $"Method with name {typename+methname} not found"));
+                else
+                {
+                    foreach (object par in parameters)
+                        Context.LoadObject(par);
+                    Context.functionBuilder.generator.Emit(OpCodes.Call, method);
+                }
+            }
+            catch (NullReferenceException)
+            {
+                errors.Add(
+                    new TypeNotFoundError(line, $"Before calling method. Type with name {typename} not found"));
+            }
+            catch (AmbiguousMatchException)
+            {
+                errors.Add(new InvalidMethodError(line,
+                    $"Method with name {typename+methname} havent parameters with types: {string.Join(", ", paramTypes)}"));
+            }
+            return errors;
         }
     }
 }

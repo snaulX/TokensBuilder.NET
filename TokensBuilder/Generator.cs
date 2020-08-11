@@ -173,6 +173,7 @@ namespace TokensBuilder
             strongTemplates.Add(TokenType.IMPORT_LIBRARY, new LibTemplate());
             strongTemplates.Add(TokenType.NAMESPACE, new NamespaceTemplate());
             strongTemplates.Add(TokenType.BREAKPOINT, new BreakpointTemplate());
+            flexTemplates.Add(new CallMethodTemplate());
             reader = new TokensReader();
         }
 

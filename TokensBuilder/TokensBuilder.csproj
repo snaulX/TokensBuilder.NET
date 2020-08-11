@@ -74,6 +74,7 @@
     <Compile Include="HeaderType.cs" />
     <Compile Include="Loop.cs" />
     <Compile Include="Templates\BreakpointTemplate.cs" />
+    <Compile Include="Templates\CallMethodTemplate.cs" />
     <Compile Include="Templates\IncludeTemplate.cs" />
     <Compile Include="Templates\LibTemplate.cs" />
     <Compile Include="Templates\NamespaceTemplate.cs" />
