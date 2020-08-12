@@ -314,13 +314,35 @@ namespace TokensBuilder
                 ilg.Emit(OpCodes.Ldc_I4, c);
             else if (value is string str)
                 ilg.Emit(OpCodes.Ldstr, str);
+            else if (value is FieldInfo fld)
+                LoadField(fld);
+            else if (value is LocalBuilder lcl)
+                LoadLocal(lcl);
         }
 
-        public static void CallMethod(MethodInfo method, List<object> pars)
+        public static void CallMethod(MethodInfo method, List<object> pars, bool dontPop = true)
         {
             foreach (object par in pars)
                 LoadObject(par);
             ilg.Emit(OpCodes.Call, method);
+            if (!dontPop && method.ReturnType != typeof(void))
+                ilg.Emit(OpCodes.Pop);
+        }
+
+        public static void LoadField(FieldInfo field)
+        {
+            if (field != null)
+                ilg.Emit(OpCodes.Ldfld, field);
+            else
+                TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect field given for load"));
+        }
+
+        public static void LoadLocal(LocalBuilder local)
+        {
+            if (local != null)
+                ilg.Emit(OpCodes.Ldloc, local);
+            else
+                TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect local given for load"));
         }
         #endregion
 

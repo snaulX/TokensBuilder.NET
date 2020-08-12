@@ -963,7 +963,7 @@ namespace TokensBuilder
                         return;
                     }
                 }
-                errors.Add(new InvalidTokensTemplateError(line, "Unknown tokens template"));
+                errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
             }
         }
 

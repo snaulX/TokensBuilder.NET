@@ -10,9 +10,10 @@ namespace TokensBuilder.Templates
     class CallMethodTemplate : TokensTemplate
     {
         private uint line => TokensBuilder.gen.line;
-        string typename = "", methname = "";
-        List<Type> paramTypes = new List<Type>();
-        List<object> parameters = new List<object>();
+        public bool dontPop = false;
+        public string typename = "", methname = "";
+        public List<Type> paramTypes = new List<Type>();
+        public List<object> parameters = new List<object>();
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
@@ -32,9 +33,13 @@ namespace TokensBuilder.Templates
                 while (token == TokenType.LITERAL || token == TokenType.SEPARATOR)
                 {
                     if (mustLiteral && token == TokenType.LITERAL)
+                    {
                         lastLiteral = expression.string_values.Peek();
+                        mustLiteral = false;
+                    }
                     else if (!mustLiteral && token == TokenType.SEPARATOR)
                     {
+                        mustLiteral = true;
                         if (expression.bool_values.Peek())
                             parentName.Append(lastLiteral + ".");
                         else
@@ -59,6 +64,7 @@ namespace TokensBuilder.Templates
                         else
                         {
                             parse_param:
+                            expression.tokens.Insert(0, token);
                             Type paramType = PartTemplate.ParseValue(ref expression, out object val);
                             if (paramType == null)
                                 return false;
@@ -100,7 +106,9 @@ namespace TokensBuilder.Templates
                 if (method == null)
                     errors.Add(new InvalidMethodError(line, $"Method with name {typename + methname} not found"));
                 else
-                    Context.CallMethod(method, parameters);
+                {
+                    Context.CallMethod(method, parameters, dontPop);
+                }
             }
             catch (NullReferenceException)
             {
