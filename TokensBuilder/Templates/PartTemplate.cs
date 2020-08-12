@@ -25,9 +25,11 @@ namespace TokensBuilder.Templates
                     if (mustLiteral && token == TokenType.LITERAL)
                     {
                         varName.Append(expression.string_values.Peek());
+                        mustLiteral = false;
                     }
                     else if (!mustLiteral && token == TokenType.SEPARATOR)
                     {
+                        mustLiteral = true;
                         if (expression.bool_values.Peek())
                             varName.Append(".");
                         else
@@ -49,6 +51,7 @@ namespace TokensBuilder.Templates
                 }
                 else
                 {
+                    expression.tokens.Insert(0, token);
                     FieldInfo field = Context.GetVarByName(varName.ToString());
                     if (field == null)
                     {
@@ -64,7 +67,7 @@ namespace TokensBuilder.Templates
             return null;
         }
 
-        public static bool ParseCallMethod(ref TokensReader expression)
+        public static MethodInfo ParseCallMethod(ref TokensReader expression)
         {
             errors = new List<TokensError>();
             List<object> parameters = new List<object>();
@@ -91,7 +94,7 @@ namespace TokensBuilder.Templates
                     token = expression.tokens.Peek();
                 }
                 if (mustLiteral)
-                    return false;
+                    return null;
                 else
                 {
                     parentName.Length--; // delete last character - '.'
@@ -109,14 +112,14 @@ namespace TokensBuilder.Templates
                             callMethod.typename = typename;
                             callMethod.dontPop = true;
                             callMethod.Run(expression);
-                            return true;
+                            return callMethod.method;
                         }
                         else
                         {
                             parse_param:
                             Type paramType = ParseValue(ref expression, out object val);
                             if (paramType == null)
-                                return false;
+                                return null;
                             else
                             {
                                 paramTypes.Add(paramType);
@@ -133,7 +136,7 @@ namespace TokensBuilder.Templates
                                         callMethod.typename = typename;
                                         callMethod.dontPop = true;
                                         callMethod.Run(expression);
-                                        return true;
+                                        return callMethod.method;
                                     }
                                     else
                                         expression.bool_values.Insert(0, true);
@@ -141,17 +144,17 @@ namespace TokensBuilder.Templates
                                 else if (token == TokenType.SEPARATOR && expression.bool_values.Peek())
                                     goto parse_param;
                                 else
-                                    return false;
+                                    return null;
                             }
-                            return false;
+                            return null;
                         }
                     }
                     else
-                        return false;
+                        return null;
                 }
             }
             else
-                return false;
+                return null;
         }
 
         public static Type ParseValue(ref TokensReader expression, out object value)
@@ -178,14 +181,21 @@ namespace TokensBuilder.Templates
             else if (token == TokenType.LITERAL)
             {
                 expression.tokens.Insert(0, TokenType.LITERAL);
-                TokensReader backup = expression;
-                if (!ParseCallMethod(ref expression))
+                TokensReader backup = new TokensReader();
+                backup.Add(expression);
+                MethodInfo method = ParseCallMethod(ref expression);
+                if (method == null)
                 {
+                    value = ParseVar(ref backup);
                     expression = backup;
-                    value = ParseVar(ref expression);
+                    if (value is FieldInfo fld)
+                        type = fld.FieldType;
                 }
                 else
-                    TokensBuilder.gen.errors.AddRange(errors);
+                {
+                    type = method.ReturnType;
+                }
+                TokensBuilder.gen.errors.AddRange(errors);
             }
             return type;
         }

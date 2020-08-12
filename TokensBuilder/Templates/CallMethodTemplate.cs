@@ -14,6 +14,7 @@ namespace TokensBuilder.Templates
         public string typename = "", methname = "";
         public List<Type> paramTypes = new List<Type>();
         public List<object> parameters = new List<object>();
+        public MethodInfo method = null;
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
@@ -99,7 +100,6 @@ namespace TokensBuilder.Templates
         public List<TokensError> Run(TokensReader expression)
         {
             List<TokensError> errors = new List<TokensError>();
-            MethodInfo method;
             try
             {
                 method = Context.GetTypeByName(typename).GetMethod(methname, paramTypes.ToArray());
