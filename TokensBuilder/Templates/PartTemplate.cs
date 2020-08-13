@@ -70,7 +70,6 @@ namespace TokensBuilder.Templates
         public static MethodInfo ParseCallMethod(ref TokensReader expression)
         {
             errors = new List<TokensError>();
-            List<object> parameters = new List<object>();
             List<Type> paramTypes = new List<Type>();
             TokenType token = expression.tokens.Peek();
             if (token == TokenType.LITERAL)
@@ -81,9 +80,13 @@ namespace TokensBuilder.Templates
                 while (token == TokenType.LITERAL || token == TokenType.SEPARATOR)
                 {
                     if (mustLiteral && token == TokenType.LITERAL)
+                    {
                         lastLiteral = expression.string_values.Peek();
+                        mustLiteral = false;
+                    }
                     else if (!mustLiteral && token == TokenType.SEPARATOR)
                     {
+                        mustLiteral = true;
                         if (expression.bool_values.Peek())
                             parentName.Append(lastLiteral + ".");
                         else
@@ -100,14 +103,13 @@ namespace TokensBuilder.Templates
                     parentName.Length--; // delete last character - '.'
                     string typename = parentName.ToString();
                     string methname = lastLiteral;
-                    if (token == TokenType.STATEMENT && expression.bool_values.Peek())
+                    if (token == TokenType.STATEMENT && expression.bool_values.Peek()) // open arguments
                     {
                         token = expression.tokens.Peek();
-                        if (token == TokenType.STATEMENT && !expression.bool_values.Peek())
+                        if (token == TokenType.STATEMENT && !expression.bool_values.Peek()) // empty arguments
                         {
                             CallMethodTemplate callMethod = new CallMethodTemplate();
                             callMethod.methname = methname;
-                            callMethod.parameters = parameters;
                             callMethod.paramTypes = paramTypes;
                             callMethod.typename = typename;
                             callMethod.dontPop = true;
@@ -117,13 +119,12 @@ namespace TokensBuilder.Templates
                         else
                         {
                             parse_param:
-                            Type paramType = ParseValue(ref expression, out object val);
+                            Type paramType = ParseValue(ref expression);
                             if (paramType == null)
                                 return null;
                             else
                             {
                                 paramTypes.Add(paramType);
-                                parameters.Add(val);
                                 token = expression.tokens.Peek();
                                 if (token == TokenType.STATEMENT)
                                 {
@@ -131,7 +132,6 @@ namespace TokensBuilder.Templates
                                     {
                                         CallMethodTemplate callMethod = new CallMethodTemplate();
                                         callMethod.methname = methname;
-                                        callMethod.parameters = parameters;
                                         callMethod.paramTypes = paramTypes;
                                         callMethod.typename = typename;
                                         callMethod.dontPop = true;
@@ -157,10 +157,9 @@ namespace TokensBuilder.Templates
                 return null;
         }
 
-        public static Type ParseValue(ref TokensReader expression, out object value)
+        public static Type ParseValue(ref TokensReader expression)
         {
             Type type = null;
-            value = null;
             errors = new List<TokensError>();
             TokenType token = expression.tokens.Peek();
             if (token == TokenType.VALUE)
@@ -176,7 +175,7 @@ namespace TokensBuilder.Templates
                 else if (valtype == 7) type = typeof(short);
                 else if (valtype == 8) type = typeof(long);
                 else if (valtype == 9) type = typeof(double);
-                value = expression.values.Peek();
+                Context.LoadObject(expression.values.Peek());
             }
             else if (token == TokenType.LITERAL)
             {
@@ -186,10 +185,10 @@ namespace TokensBuilder.Templates
                 MethodInfo method = ParseCallMethod(ref expression);
                 if (method == null)
                 {
-                    value = ParseVar(ref backup);
+                    FieldInfo value = ParseVar(ref backup);
                     expression = backup;
-                    if (value is FieldInfo fld)
-                        type = fld.FieldType;
+                    Context.LoadField(value);
+                    type = value.FieldType;
                 }
                 else
                 {

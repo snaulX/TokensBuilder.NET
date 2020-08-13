@@ -320,13 +320,16 @@ namespace TokensBuilder
                 LoadLocal(lcl);
         }
 
-        public static void CallMethod(MethodInfo method, List<object> pars, bool dontPop = true)
+        public static void CallMethod(MethodInfo method, bool dontPop = true)
         {
-            foreach (object par in pars)
-                LoadObject(par);
             ilg.Emit(OpCodes.Call, method);
-            if (!dontPop && method.ReturnType != typeof(void))
-                ilg.Emit(OpCodes.Pop);
+            if (!dontPop)
+            {
+                if (method.ReturnType == typeof(void))
+                    ilg.Emit(OpCodes.Nop);
+                else
+                    ilg.Emit(OpCodes.Pop);
+            }
         }
 
         public static void LoadField(FieldInfo field)

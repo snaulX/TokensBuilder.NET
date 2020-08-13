@@ -13,7 +13,6 @@ namespace TokensBuilder.Templates
         public bool dontPop = false;
         public string typename = "", methname = "";
         public List<Type> paramTypes = new List<Type>();
-        public List<object> parameters = new List<object>();
         public MethodInfo method = null;
 
         public bool Parse(TokensReader expression, bool expression_end)
@@ -21,7 +20,6 @@ namespace TokensBuilder.Templates
             if (!expression_end) 
                 return false;
 
-            parameters = new List<object>();
             paramTypes = new List<Type>();
             methname = "";
             typename = "";
@@ -66,13 +64,12 @@ namespace TokensBuilder.Templates
                         {
                             parse_param:
                             expression.tokens.Insert(0, token);
-                            Type paramType = PartTemplate.ParseValue(ref expression, out object val);
+                            Type paramType = PartTemplate.ParseValue(ref expression);
                             if (paramType == null)
                                 return false;
                             else
                             {
                                 paramTypes.Add(paramType);
-                                parameters.Add(val);
                                 token = expression.tokens.Peek();
                                 if (token == TokenType.STATEMENT)
                                 {
@@ -107,7 +104,7 @@ namespace TokensBuilder.Templates
                     errors.Add(new InvalidMethodError(line, $"Method with name {typename + methname} not found"));
                 else
                 {
-                    Context.CallMethod(method, parameters, dontPop);
+                    Context.CallMethod(method, dontPop);
                 }
             }
             catch (NullReferenceException)
