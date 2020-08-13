@@ -81,6 +81,7 @@
     <Compile Include="Templates\NamespaceTemplate.cs" />
     <Compile Include="Templates\PartTemplate.cs" />
     <Compile Include="Templates\UseTemplate.cs" />
+    <Compile Include="Templates\VarTemplate.cs" />
     <Compile Include="TokensTemplate.cs" />
     <Compile Include="WhileLoop.cs" />
     <Compile Include="TokensBuilder.cs" />

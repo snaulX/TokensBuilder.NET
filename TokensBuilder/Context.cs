@@ -23,6 +23,7 @@ namespace TokensBuilder
             set => _classBuilder = value;
         }
         public static FunctionBuilder functionBuilder => classBuilder.methodBuilder;
+        public static bool isFuncBody => functionBuilder != null && !functionBuilder.IsEmpty;
         private static Generator gen => TokensBuilder.gen;
         private static ILGenerator ilg => functionBuilder.generator;
         public static readonly CustomAttributeBuilder entrypointAttr = new CustomAttributeBuilder(

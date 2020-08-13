@@ -173,6 +173,7 @@ namespace TokensBuilder
             strongTemplates.Add(TokenType.IMPORT_LIBRARY, new LibTemplate());
             strongTemplates.Add(TokenType.NAMESPACE, new NamespaceTemplate());
             strongTemplates.Add(TokenType.BREAKPOINT, new BreakpointTemplate());
+            strongTemplates.Add(TokenType.VAR, new VarTemplate());
             flexTemplates.Add(new CallMethodTemplate());
             reader = new TokensReader();
         }
@@ -949,7 +950,7 @@ namespace TokensBuilder
                 if (expression.tokens.Count == 0) return;
                 TokensTemplate template = strongTemplates[expression.tokens[0]];
                 if (template.Parse(expression, exprend))
-                    template.Run(expression);
+                    errors.AddRange(template.Run(expression));
                 else
                     errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
             }
