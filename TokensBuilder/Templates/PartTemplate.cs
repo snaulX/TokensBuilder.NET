@@ -118,6 +118,7 @@ namespace TokensBuilder.Templates
                         }
                         else
                         {
+                            expression.tokens.Insert(0, token);
                             parse_param:
                             Type paramType = ParseValue(ref expression);
                             if (paramType == null)
@@ -141,7 +142,7 @@ namespace TokensBuilder.Templates
                                     else
                                         expression.bool_values.Insert(0, true);
                                 }
-                                else if (token == TokenType.SEPARATOR && expression.bool_values.Peek())
+                                else if (token == TokenType.SEPARATOR && !expression.bool_values.Peek())
                                     goto parse_param;
                                 else
                                     return null;
@@ -187,8 +188,11 @@ namespace TokensBuilder.Templates
                 {
                     FieldInfo value = ParseVar(ref backup);
                     expression = backup;
-                    Context.LoadField(value);
-                    type = value.FieldType;
+                    if (value != null)
+                    {
+                        Context.LoadField(value);
+                        type = value.FieldType;
+                    }
                 }
                 else
                 {

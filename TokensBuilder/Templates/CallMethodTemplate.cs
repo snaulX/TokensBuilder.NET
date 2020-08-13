@@ -62,8 +62,8 @@ namespace TokensBuilder.Templates
                             return true;
                         else
                         {
-                            parse_param:
                             expression.tokens.Insert(0, token);
+                            parse_param:
                             Type paramType = PartTemplate.ParseValue(ref expression);
                             if (paramType == null)
                                 return false;
@@ -78,7 +78,7 @@ namespace TokensBuilder.Templates
                                     else
                                         expression.bool_values.Insert(0, true);
                                 }
-                                else if (token == TokenType.SEPARATOR && expression.bool_values.Peek())
+                                else if (token == TokenType.SEPARATOR && !expression.bool_values.Peek())
                                     goto parse_param;
                                 else
                                     return false;
