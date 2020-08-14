@@ -364,6 +364,111 @@ namespace TokensBuilder
             else
                 TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect local given for assign"));
         }
+
+        public static void LoadOperator(Type callerType, OperatorType op)
+        {
+            switch (op)
+            {
+                case OperatorType.ADD:
+                    if (callerType.IsNumber())
+                        ilg.Emit(OpCodes.Add);
+                    else
+                        callerType.GetMethod("op_Addition");
+                    break;
+                case OperatorType.SUB:
+                    if (callerType.IsNumber())
+                        ilg.Emit(OpCodes.Sub);
+                    else
+                        callerType.GetMethod("op_Substraction");
+                    break;
+                case OperatorType.MUL:
+                    if (callerType.IsNumber())
+                        ilg.Emit(OpCodes.Mul);
+                    else
+                        callerType.GetMethod("op_Multiply");
+                    break;
+                case OperatorType.DIV:
+                    if (callerType.IsNumber())
+                        ilg.Emit(OpCodes.Div);
+                    else
+                        callerType.GetMethod("op_Division");
+                    break;
+                case OperatorType.MOD:
+                    if (callerType.IsNumber())
+                        ilg.Emit(OpCodes.Rem);
+                    else
+                        TokensBuilder.Error(new InvalidOperatorError(
+                            gen.line, "Operator MOD cannot using in not-number types"));
+                    break;
+                case OperatorType.EQ:
+                    if (callerType.IsNumber() || callerType == typeof(bool))
+                        ilg.Emit(OpCodes.Ceq);
+                    else
+                        callerType.GetMethod("op_Equality");
+                    break;
+                case OperatorType.NOTEQ:
+                    if (callerType.IsNumber() || callerType == typeof(bool))
+                    {
+                        ilg.Emit(OpCodes.Ceq);
+                        ilg.Emit(OpCodes.Not);
+                    }
+                    else
+                        callerType.GetMethod("op_Inequality");
+                    break;
+                case OperatorType.AND:
+                    if (callerType == typeof(bool))
+                        ilg.Emit(OpCodes.And);
+                    else
+                        TokensBuilder.Error(new InvalidOperatorError(
+                            gen.line, "Operator AND cannot using with not-boolean types"));
+                    break;
+                case OperatorType.OR:
+                    if (callerType == typeof(bool))
+                        ilg.Emit(OpCodes.Or);
+                    else
+                        TokensBuilder.Error(new InvalidOperatorError(
+                            gen.line, "Operator OR cannot using with not-boolean types"));
+                    break;
+                case OperatorType.XOR:
+                    ilg.Emit(OpCodes.Xor);
+                    break;
+                case OperatorType.GT:
+                    if (callerType.IsNumber())
+                        ilg.Emit(OpCodes.Cgt);
+                    else
+                        callerType.GetMethod("op_GreaterThan");
+                    break;
+                case OperatorType.LT:
+                    if (callerType.IsNumber())
+                        ilg.Emit(OpCodes.Clt);
+                    else
+                        callerType.GetMethod("op_LessThan");
+                    break;
+                case OperatorType.IN:
+                    break;
+                case OperatorType.GORE:
+                    //if (callerType.IsNumber())
+                        //ilg.Emit(OpCodes.Cgt);
+                    //else
+                    callerType.GetMethod("op_GreaterThanOrEqual");
+                    break;
+                case OperatorType.LORE:
+                    //if (callerType.IsNumber())
+                        //ilg.Emit(OpCodes.Clt);
+                    //else
+                    callerType.GetMethod("op_LessThanOrEqual");
+                    break;
+                case OperatorType.RANGE:
+                    break;
+                case OperatorType.POW:
+                    ilg.Emit(OpCodes.Call, typeof(Math).GetMethod("Pow"));
+                    break;
+                default:
+                    TokensBuilder.Error(new InvalidOperatorError(
+                        gen.line, $"Operator {op} cannot using between two values"));
+                    break;
+            }
+        }
         #endregion
 
         public static void Finish()

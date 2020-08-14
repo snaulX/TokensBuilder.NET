@@ -80,8 +80,8 @@ namespace TokensBuilder
             return elem;
         }
 
-        public static bool IsSimpleDataType(this Type t)
+        public static bool IsNumber(this Type t)
             => t == typeof(byte) || t == typeof(sbyte) || t == typeof(int) || t == typeof(short)
-            || t == typeof(float) || t == typeof(long) || t == typeof(double) || t == typeof(bool);
+            || t == typeof(float) || t == typeof(long) || t == typeof(double);
     }
 }

@@ -213,6 +213,16 @@ namespace TokensBuilder.Templates
                 }
                 else
                     type = method.ReturnType;
+                if (expression.tokens[0] == TokenType.OPERATOR)
+                {
+                    expression.tokens.RemoveAt(0);
+                    OperatorType op = expression.operators.Peek();
+                    if (type == ParseValue(ref expression))
+                        Context.LoadOperator(type, op);
+                    else
+                        errors.Add(new InvalidTypeError(
+                            line, $"Type {type} before operator {op} not equals type of value after operator"));
+                }
                 TokensBuilder.gen.errors.AddRange(errors);
             }
             return type;

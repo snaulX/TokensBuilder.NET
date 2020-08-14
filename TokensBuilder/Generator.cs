@@ -345,7 +345,7 @@ namespace TokensBuilder
                     gen.Emit(OpCodes.Ceq);
                     break;
                 case OperatorType.NOTEQ:
-                    if (f.IsSimpleDataType())
+                    if (f.IsNumber() || f == typeof(bool))
                     {
                         gen.Emit(OpCodes.Ceq);
                         gen.Emit(OpCodes.Not);
