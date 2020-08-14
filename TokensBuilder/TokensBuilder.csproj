@@ -63,6 +63,7 @@
     <Compile Include="Errors\InvalidOutTypeError.cs" />
     <Compile Include="Errors\InvalidTokenError.cs" />
     <Compile Include="Errors\InvalidTokensTemplateError.cs" />
+    <Compile Include="Errors\InvalidTypeError.cs" />
     <Compile Include="Errors\InvalidVarTypeError.cs" />
     <Compile Include="Errors\NeedEndError.cs" />
     <Compile Include="Errors\NotInitClassError.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="Generator.cs" />
     <Compile Include="HeaderType.cs" />
     <Compile Include="Loop.cs" />
+    <Compile Include="Templates\AssignTemplate.cs" />
     <Compile Include="Templates\BreakpointTemplate.cs" />
     <Compile Include="Templates\CallMethodTemplate.cs" />
     <Compile Include="Templates\IncludeTemplate.cs" />

@@ -33,7 +33,7 @@ namespace TokensBuilder
         public bool tryDirective = false, putLoopStatement = false;
         public TokenType prev;
 
-        //flags
+        #region Flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
             needSeparator = false, needReturn = false, needAssign = false, initClass = false, isParams = false,
             isFuncAlias = false, isTypeAlias = false, isCtor = false, needBlock = false;
@@ -44,8 +44,9 @@ namespace TokensBuilder
         private byte insertOp = 2;
         private Dictionary<TokenType, TokensTemplate> strongTemplates = new Dictionary<TokenType, TokensTemplate>();
         private List<TokensTemplate> flexTemplates = new List<TokensTemplate>();
+        #endregion
 
-        //properties
+        #region Properties
         private string curLiteral
         {
             get
@@ -102,6 +103,7 @@ namespace TokensBuilder
             }
         }
         private ILGenerator gen => Context.functionBuilder.generator;
+        #endregion
 
         //methods
         private void RemoveLastLiterals()
@@ -175,6 +177,7 @@ namespace TokensBuilder
             strongTemplates.Add(TokenType.BREAKPOINT, new BreakpointTemplate());
             strongTemplates.Add(TokenType.VAR, new VarTemplate());
             flexTemplates.Add(new CallMethodTemplate());
+            flexTemplates.Add(new AssignTemplate());
             reader = new TokensReader();
         }
 
@@ -949,20 +952,31 @@ namespace TokensBuilder
             {
                 if (expression.tokens.Count == 0) return;
                 TokensTemplate template = strongTemplates[expression.tokens[0]];
-                if (template.Parse(expression, exprend))
-                    errors.AddRange(template.Run(expression));
-                else
+                try
+                {
+                    if (template.Parse(expression, exprend))
+                        errors.AddRange(template.Run(expression));
+                    else
+                        errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
+                }
+                finally
+                {
                     errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
+                }
             }
             catch (KeyNotFoundException)
             {
                 foreach (TokensTemplate template in flexTemplates)
                 {
-                    if (template.Parse(expression, exprend))
+                    try
                     {
-                        template.Run(expression);
-                        return;
+                        if (template.Parse(expression, exprend))
+                        {
+                            template.Run(expression);
+                            return;
+                        }
                     }
+                    finally { }
                 }
                 errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
             }

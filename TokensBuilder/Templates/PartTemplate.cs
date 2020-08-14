@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using TokensAPI;
 using TokensBuilder.Errors;
@@ -65,6 +66,14 @@ namespace TokensBuilder.Templates
                 expression.tokens.Insert(0, token);
             }
             return null;
+        }
+
+        public static LocalBuilder ParseLocal(ref TokensReader expression)
+        {
+            if (expression.tokens.Peek() == TokenType.LITERAL)
+                return Context.functionBuilder.GetLocal(expression.string_values.Peek());
+            else 
+                return null;
         }
 
         public static MethodInfo ParseCallMethod(ref TokensReader expression)
@@ -178,20 +187,27 @@ namespace TokensBuilder.Templates
                 else if (valtype == 9) type = typeof(double);
                 Context.LoadObject(expression.values.Peek());
             }
-            else if (token == TokenType.LITERAL)
+            else if (token == TokenType.LITERAL) // is method
             {
                 expression.tokens.Insert(0, TokenType.LITERAL);
                 TokensReader backup = new TokensReader();
                 backup.Add(expression);
                 MethodInfo method = ParseCallMethod(ref expression);
-                if (method == null)
+                if (method == null) // is field
                 {
-                    FieldInfo value = ParseVar(ref backup);
                     expression = backup;
+                    FieldInfo value = ParseVar(ref expression);
                     if (value != null)
                     {
                         Context.LoadField(value);
                         type = value.FieldType;
+                    }
+                    else // is local
+                    {
+                        expression = backup;
+                        LocalBuilder local = ParseLocal(ref expression);
+                        Context.LoadLocal(local);
+                        type = local.LocalType;
                     }
                 }
                 else

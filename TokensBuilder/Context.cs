@@ -341,12 +341,28 @@ namespace TokensBuilder
                 TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect field given for load"));
         }
 
+        public static void SetField(FieldInfo field)
+        {
+            if (field != null)
+                ilg.Emit(OpCodes.Stfld, field);
+            else
+                TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect field given for assign"));
+        }
+
         public static void LoadLocal(LocalBuilder local)
         {
             if (local != null)
                 ilg.Emit(OpCodes.Ldloc, local);
             else
                 TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect local given for load"));
+        }
+
+        public static void SetLocal(LocalBuilder local)
+        {
+            if (local != null)
+                ilg.Emit(OpCodes.Stloc, local);
+            else
+                TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect local given for assign"));
         }
         #endregion
 

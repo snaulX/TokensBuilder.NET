@@ -11,7 +11,8 @@ namespace TokensBuilder
     {
         public bool IsEmpty => typeBuilder == null;
         public bool? actual = null;
-        public Dictionary<string, FieldBuilder> constants = new Dictionary<string, FieldBuilder>();
+        public Dictionary<string, FieldBuilder> constants = new Dictionary<string, FieldBuilder>(),
+            finalFields = new Dictionary<string, FieldBuilder>();
         public FunctionBuilder methodBuilder = null;
         public FieldBuilder fieldBuilder = null;
         private TypeBuilder typeBuilder;
@@ -87,6 +88,10 @@ namespace TokensBuilder
             }
         }
 
+        /// <summary>
+        /// Make operations before end field and end field
+        /// </summary>
+        /// <returns>Have field?</returns>
         public bool TryEndField()
         {
             if (fieldBuilder != null)
@@ -127,7 +132,13 @@ namespace TokensBuilder
 
         public void SetAttribute(CustomAttributeBuilder attr) => typeBuilder.SetCustomAttribute(attr);
 
-        internal void DefineField(string name, string typeName, FieldAttributes fieldAttributes) =>
+        /// <summary>
+        /// Set fieldBuilder
+        /// </summary>
+        /// <param name="name">Name of field</param>
+        /// <param name="typeName">Name of type of field</param>
+        /// <param name="fieldAttributes">Attributes of field</param>
+        public void DefineField(string name, string typeName, FieldAttributes fieldAttributes) =>
             fieldBuilder = typeBuilder.DefineField(name, Context.GetTypeByName(typeName), fieldAttributes);
 
         public Type End()

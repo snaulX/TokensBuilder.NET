@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using TokensAPI;
-using TokensBuilder.Errors;
 
 namespace TokensBuilder.Templates
 {
@@ -69,6 +69,28 @@ namespace TokensBuilder.Templates
                 foreach (string varname in varnames)
                     Context.functionBuilder.localVariables.Add(
                         varname, Context.functionBuilder.DeclareLocal(typename));
+            }
+            else
+            {
+                foreach (string varname in varnames)
+                {
+                    FieldAttributes fieldAttributes;
+                    if (security == SecurityDegree.PUBLIC)
+                        fieldAttributes = FieldAttributes.Public;
+                    else if (security == SecurityDegree.PRIVATE)
+                        fieldAttributes = FieldAttributes.Private;
+                    else if (security == SecurityDegree.PROTECTED)
+                        fieldAttributes = FieldAttributes.Family;
+                    else // if security == INTERNAL
+                        fieldAttributes = FieldAttributes.Assembly;
+                    if (type == VarType.STATIC)
+                        fieldAttributes |= FieldAttributes.Static;
+                    else if (type == VarType.CONST)
+                        fieldAttributes |= FieldAttributes.Literal;
+                    Context.classBuilder.DefineField(varname, typename, fieldAttributes);
+                    if (type == VarType.FINAL)
+                        Context.classBuilder.finalFields.Add(varname, Context.classBuilder.fieldBuilder);
+                }
             }
             return errors;
         }

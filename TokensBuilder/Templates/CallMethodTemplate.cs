@@ -59,7 +59,12 @@ namespace TokensBuilder.Templates
                     {
                         token = expression.tokens.Peek();
                         if (token == TokenType.STATEMENT && !expression.bool_values.Peek())
-                            return true;
+                        {
+                            if (expression.tokens.Count == 0)
+                                return true;
+                            else
+                                return false;
+                        }
                         else
                         {
                             expression.tokens.Insert(0, token);
@@ -74,7 +79,12 @@ namespace TokensBuilder.Templates
                                 if (token == TokenType.STATEMENT)
                                 {
                                     if (!expression.bool_values.Peek())
-                                        return true;
+                                    {
+                                        if (expression.tokens.Count == 0)
+                                            return true;
+                                        else
+                                            return false;
+                                    }
                                     else
                                         expression.bool_values.Insert(0, true);
                                 }
