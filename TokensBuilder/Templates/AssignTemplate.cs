@@ -18,15 +18,16 @@ namespace TokensBuilder.Templates
             field = null;
             local = null;
             valuetype = null;
-            if (expression.tokens.Peek() == TokenType.LITERAL)
+            if (expression.tokens.Peek() == TokenType.LITERAL && expression_end)
             {
+                expression.tokens.Insert(0, TokenType.LITERAL);
                 TokensReader backup = new TokensReader();
                 backup.Add(expression);
-                field = PartTemplate.ParseVar(ref expression);
-                if (field == null) // is local
+                local = PartTemplate.ParseLocal(ref expression);
+                if (local == null) // is field
                 {
                     expression = backup;
-                    local = PartTemplate.ParseLocal(ref expression);
+                    field = PartTemplate.ParseField(ref expression);
                 }
 
                 if (expression.tokens.Peek() == TokenType.OPERATOR && expression.operators.Peek() == OperatorType.ASSIGN)

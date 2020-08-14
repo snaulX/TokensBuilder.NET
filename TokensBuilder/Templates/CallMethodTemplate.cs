@@ -52,22 +52,21 @@ namespace TokensBuilder.Templates
                     return false;
                 else
                 {
-                    parentName.Length--; // delete last character - '.'
+                    if (parentName.Length == 0) parentName.Append(lastLiteral);
+                    else parentName.Length--; // delete last character - '.'
                     typename = parentName.ToString();
                     methname = lastLiteral;
                     if (token == TokenType.STATEMENT && expression.bool_values.Peek())
                     {
-                        token = expression.tokens.Peek();
-                        if (token == TokenType.STATEMENT && !expression.bool_values.Peek())
+                        if (expression.tokens[0] == TokenType.STATEMENT && !expression.bool_values[0])
                         {
-                            if (expression.tokens.Count == 0)
+                            if (expression.tokens.Count == 1)
                                 return true;
                             else
                                 return false;
                         }
                         else
                         {
-                            expression.tokens.Insert(0, token);
                             parse_param:
                             Type paramType = PartTemplate.ParseValue(ref expression);
                             if (paramType == null)

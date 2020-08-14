@@ -13,7 +13,7 @@ namespace TokensBuilder.Templates
         static uint line => TokensBuilder.gen.line;
         public static List<TokensError> errors = new List<TokensError>();
 
-        public static FieldInfo ParseVar(ref TokensReader expression)
+        public static FieldInfo ParseField(ref TokensReader expression)
         {
             errors = new List<TokensError>();
             TokenType token = expression.tokens.Peek();
@@ -109,7 +109,8 @@ namespace TokensBuilder.Templates
                     return null;
                 else
                 {
-                    parentName.Length--; // delete last character - '.'
+                    if (parentName.Length == 0) parentName.Append(lastLiteral);
+                    else parentName.Length--; // delete last character - '.'
                     string typename = parentName.ToString();
                     string methname = lastLiteral;
                     if (token == TokenType.STATEMENT && expression.bool_values.Peek()) // open arguments
@@ -193,27 +194,25 @@ namespace TokensBuilder.Templates
                 TokensReader backup = new TokensReader();
                 backup.Add(expression);
                 MethodInfo method = ParseCallMethod(ref expression);
-                if (method == null) // is field
+                if (method == null)
                 {
                     expression = backup;
-                    FieldInfo value = ParseVar(ref expression);
-                    if (value != null)
+                    LocalBuilder local = ParseLocal(ref expression);
+                    if (local != null)
                     {
-                        Context.LoadField(value);
-                        type = value.FieldType;
-                    }
-                    else // is local
-                    {
-                        expression = backup;
-                        LocalBuilder local = ParseLocal(ref expression);
                         Context.LoadLocal(local);
                         type = local.LocalType;
                     }
+                    else // is field
+                    {
+                        expression = backup;
+                        FieldInfo value = ParseField(ref expression);
+                        Context.LoadField(value);
+                        type = value.FieldType;
+                    }
                 }
                 else
-                {
                     type = method.ReturnType;
-                }
                 TokensBuilder.gen.errors.AddRange(errors);
             }
             return type;

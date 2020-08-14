@@ -959,7 +959,7 @@ namespace TokensBuilder
                     else
                         errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
                 }
-                finally
+                catch
                 {
                     errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
                 }
@@ -968,6 +968,8 @@ namespace TokensBuilder
             {
                 foreach (TokensTemplate template in flexTemplates)
                 {
+                    TokensReader backup = new TokensReader();
+                    backup.Add(expression);
                     try
                     {
                         if (template.Parse(expression, exprend))
@@ -975,8 +977,10 @@ namespace TokensBuilder
                             template.Run(expression);
                             return;
                         }
+                        else
+                            expression = backup;
                     }
-                    finally { }
+                    catch { expression = backup; }
                 }
                 errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
             }
