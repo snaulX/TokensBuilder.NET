@@ -19,7 +19,7 @@ namespace TokensBuilder
         //putLoopStatement - идёт ли добавление выражения цикла? (например блок цикла закончился и после него мы пушим выражение)
 
         public uint line = 0, loopStatement = 0;
-        public TokensReader reader;
+        public TokensReader reader, expression;
         public string currentNamespace = "";
         public List<string> literals = new List<string>(), usingNamespaces = new List<string>();
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
@@ -31,7 +31,7 @@ namespace TokensBuilder
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         public Stack<List<OpCode>> blocks = new Stack<List<OpCode>>();
         public bool tryDirective = false, putLoopStatement = false;
-        public TokenType prev;
+        public TokenType prev, tryToken = 0;
 
         #region Flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
@@ -169,6 +169,8 @@ namespace TokensBuilder
             directives.Add("endtry", () =>
             {
                 tryDirective = false;
+                expression.tokens.Add(tryToken);
+                tryToken = 0;
             });
             strongTemplates.Add(TokenType.INCLUDE, new IncludeTemplate());
             strongTemplates.Add(TokenType.USING_NAMESPACE, new UseTemplate());
@@ -879,78 +881,106 @@ namespace TokensBuilder
         /// </summary>
         public void ParseExpression()
         {
-            TokensReader expression = new TokensReader();
+            expression = new TokensReader();
             bool exprend = true;
-            int i = 0;
-            foreach (TokenType token in reader.tokens)
+            int pos = 0;
+            while (pos < reader.tokens.Count)
             {
-                i++;
+                TokenType token = reader.tokens[pos];
+                pos++;
+                if (tryDirective)
+                {
+                    if (token == TokenType.DIRECTIVE)
+                    {
+                        pos = ParseDirective(pos);
+                    }
+                    else if (tryToken == 0)
+                        tryToken = token;
+                    else
+                    {
+                        tryToken |= token;
+                    }
+                }
                 if (token == TokenType.EXPRESSION_END || token == TokenType.BLOCK)
                 {
                     if (token == TokenType.EXPRESSION_END) exprend = true;
-                    else exprend = false;
+                    else
+                    {
+                        if (reader.bool_values.Peek())
+                        {
+                            exprend = false;
+                            needEndBlock++;
+                        }
+                        else
+                        {
+                            if (expression.tokens.IsEmpty()) needEndBlock--;
+                            else errors.Add(new NeedEndError(line, "Doesnt close expression before closing block"));
+                        }
+                    }
                     break;
                 }
-                if (token != TokenType.NEWLN) expression.tokens.Add(token);
-                else line++;
-                if (token == TokenType.CLASS)
+                else if (token == TokenType.NEWLN) line++;
+                else if (token == TokenType.DIRECTIVE)
                 {
-                    expression.string_values.Add(reader.string_values.Peek());
-                    expression.class_types.Add(reader.class_types.Peek());
-                    expression.securities.Add(reader.securities.Peek());
+                    pos = ParseDirective(pos);
                 }
-                else if (token == TokenType.FUNCTION)
+                else
                 {
-                    expression.string_values.Add(reader.string_values.Peek());
-                    expression.string_values.Add(reader.string_values.Peek());
-                    expression.function_types.Add(reader.function_types.Peek());
-                    expression.securities.Add(reader.securities.Peek());
-                }
-                else if (token == TokenType.VAR)
-                {
-                    expression.var_types.Add(reader.var_types.Peek());
-                    expression.securities.Add(reader.securities.Peek());
-                }
-                else if (token == TokenType.STATEMENT || token == TokenType.SEQUENCE || token == TokenType.SEPARATOR
-                    || token == TokenType.RETURN || token == TokenType.LAMBDA || token == TokenType.ASYNC
-                    || token == TokenType.PARAMETER_TYPE || token == TokenType.GENERIC || token == TokenType.ACTUAL)
-                {
-                    expression.bool_values.Add(reader.bool_values.Peek());
-                }
-                else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.NAMESPACE
-                    || token == TokenType.IMPORT_LIBRARY || token == TokenType.INCLUDE || token == TokenType.USING_NAMESPACE
-                    || token == TokenType.INSTANCEOF || token == TokenType.GOTO || token == TokenType.LABEL)
-                {
-                    expression.string_values.Add(reader.string_values.Peek());
-                }
-                else if (token == TokenType.LOOP)
-                {
-                    expression.loops.Add(reader.loops.Peek());
-                }
-                else if (token == TokenType.LOOP_OPERATOR)
-                {
-                    expression.bool_values.Add(reader.bool_values.Peek());
-                    expression.string_values.Add(reader.string_values.Peek());
-                }
-                else if (token == TokenType.OPERATOR)
-                {
-                    expression.operators.Add(reader.operators.Peek());
-                }
-                else if (token == TokenType.VALUE)
-                {
-                    expression.byte_values.Add(reader.byte_values.Peek());
-                    expression.values.Add(reader.values.Peek());
+                    if (!tryDirective) expression.tokens.Add(token);
+                    if (token == TokenType.CLASS)
+                    {
+                        expression.string_values.Add(reader.string_values.Peek());
+                        expression.class_types.Add(reader.class_types.Peek());
+                        expression.securities.Add(reader.securities.Peek());
+                    }
+                    else if (token == TokenType.FUNCTION)
+                    {
+                        expression.string_values.Add(reader.string_values.Peek());
+                        expression.string_values.Add(reader.string_values.Peek());
+                        expression.function_types.Add(reader.function_types.Peek());
+                        expression.securities.Add(reader.securities.Peek());
+                    }
+                    else if (token == TokenType.VAR)
+                    {
+                        expression.var_types.Add(reader.var_types.Peek());
+                        expression.securities.Add(reader.securities.Peek());
+                    }
+                    else if (token == TokenType.STATEMENT || token == TokenType.SEQUENCE || token == TokenType.SEPARATOR
+                        || token == TokenType.RETURN || token == TokenType.LAMBDA || token == TokenType.ASYNC
+                        || token == TokenType.PARAMETER_TYPE || token == TokenType.GENERIC || token == TokenType.ACTUAL)
+                    {
+                        expression.bool_values.Add(reader.bool_values.Peek());
+                    }
+                    else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.NAMESPACE
+                        || token == TokenType.IMPORT_LIBRARY || token == TokenType.INCLUDE || token == TokenType.USING_NAMESPACE
+                        || token == TokenType.INSTANCEOF || token == TokenType.GOTO || token == TokenType.LABEL)
+                    {
+                        expression.string_values.Add(reader.string_values.Peek());
+                    }
+                    else if (token == TokenType.LOOP)
+                    {
+                        expression.loops.Add(reader.loops.Peek());
+                    }
+                    else if (token == TokenType.LOOP_OPERATOR)
+                    {
+                        expression.bool_values.Add(reader.bool_values.Peek());
+                        expression.string_values.Add(reader.string_values.Peek());
+                    }
+                    else if (token == TokenType.OPERATOR)
+                    {
+                        expression.operators.Add(reader.operators.Peek());
+                    }
+                    else if (token == TokenType.VALUE)
+                    {
+                        expression.byte_values.Add(reader.byte_values.Peek());
+                        expression.values.Add(reader.values.Peek());
+                    }
                 }
             }
-            reader.tokens.RemoveRange(0, i);
-            if (!exprend)
-            {
-                if (reader.bool_values.Peek()) needEndBlock++;
-                else needEndBlock--;
-            }
+            reader.tokens.RemoveRange(0, pos);
             try
             {
-                if (expression.tokens.Count == 0) return;
+                if (expression.tokens.IsEmpty()) return;
                 TokensTemplate template = strongTemplates[expression.tokens[0]];
                 try
                 {
@@ -984,6 +1014,26 @@ namespace TokensBuilder
                 }
                 errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
             }
+        }
+
+        public int ParseDirective(int pos)
+        {
+            if (reader.tokens[pos] == TokenType.LITERAL)
+            {
+                pos++;
+                string dname = reader.string_values.Peek();
+                try
+                {
+                    directives[dname]();
+                }
+                catch (KeyNotFoundException)
+                {
+                    errors.Add(new DirectiveError(line, $"Directive with name {dname} not found"));
+                }
+            }
+            else
+                errors.Add(new InvalidTokenError(line, $"Invalid token {reader.tokens[pos]} after directive"));
+            return pos;
         }
 
         public void ParseTokensLibrary(string path)
