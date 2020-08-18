@@ -31,13 +31,15 @@ namespace TokensBuilder
         public Dictionary<string, Label> labels = new Dictionary<string, Label>();
         public Stack<List<OpCode>> blocks = new Stack<List<OpCode>>();
         public bool tryDirective = false, putLoopStatement = false;
-        public TokenType prev, tryToken = 0;
+        public TokenType prev;
+        public List<TokenType> tryTokens = new List<TokenType>();
+        public Stack<int> tryPositions = new Stack<int>(), tryCounts = new Stack<int>(); // positions of 'try' tokens
 
         #region Flags
         private bool isDirective = false, needEnd = false, extends = false, implements = false, ifDirective = true, 
             needSeparator = false, needReturn = false, needAssign = false, initClass = false, isParams = false,
             isFuncAlias = false, isTypeAlias = false, isCtor = false, needBlock = false;
-        private int curLiteralIndex = 0, funcArgs = 0, classDefinition = 0;
+        private int curLiteralIndex = 0, funcArgs = 0, classDefinition = 0, count = 0;
         private Stack<int> lengthLiterals = new Stack<int>();
         private OperatorType? needOperator = null;
         private Stack<Loop> loops = new Stack<Loop>();
@@ -169,8 +171,9 @@ namespace TokensBuilder
             directives.Add("endtry", () =>
             {
                 tryDirective = false;
-                expression.tokens.Add(tryToken);
-                tryToken = 0;
+                tryPositions.Push(expression.tokens.Count);
+                tryCounts.Push(tryTokens.Count - tryCounts.Sum());
+                expression.tokens.Add(tryTokens.Last());
             });
             strongTemplates.Add(TokenType.INCLUDE, new IncludeTemplate());
             strongTemplates.Add(TokenType.USING_NAMESPACE, new UseTemplate());
@@ -886,19 +889,21 @@ namespace TokensBuilder
             int pos = 0;
             while (pos < reader.tokens.Count)
             {
-                TokenType token = reader.tokens[pos];
                 pos++;
+                TokenType token;
+                try
+                {
+                    token = reader.tokens[pos];
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    break;
+                }
                 if (tryDirective)
                 {
-                    if (token == TokenType.DIRECTIVE)
+                    if (token != TokenType.DIRECTIVE)
                     {
-                        pos = ParseDirective(pos);
-                    }
-                    else if (tryToken == 0)
-                        tryToken = token;
-                    else
-                    {
-                        tryToken |= token;
+                        tryTokens.Add(token);
                     }
                 }
                 if (token == TokenType.EXPRESSION_END || token == TokenType.BLOCK)
@@ -922,7 +927,7 @@ namespace TokensBuilder
                 else if (token == TokenType.NEWLN) line++;
                 else if (token == TokenType.DIRECTIVE)
                 {
-                    pos = ParseDirective(pos);
+                    pos = ParseDirective(++pos);
                 }
                 else
                 {
@@ -978,24 +983,57 @@ namespace TokensBuilder
                 }
             }
             reader.tokens.RemoveRange(0, pos);
+            bool error = false;
+            int trypos = -1;
             try
             {
                 if (expression.tokens.IsEmpty()) return;
+                reparse:
+                Context.CreateBackup();
                 TokensTemplate template = strongTemplates[expression.tokens[0]];
                 try
                 {
                     if (template.Parse(expression, exprend))
-                        errors.AddRange(template.Run(expression));
+                    {
+                        List<TokensError> errs = template.Run(expression);
+                        if (!errs.IsEmpty())
+                        {
+                            errors.AddRange(errs);
+                            error = true;
+                        }
+                    }
                     else
-                        errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
+                        error = true;
                 }
                 catch
                 {
-                    errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
+                    error = true;
+                }
+                if (error)
+                {
+                    Context.ReturnBackup();
+                    if (!tryTokens.IsEmpty())
+                    {
+                        if (trypos < 0) trypos = tryPositions.Pop();
+                        expression.tokens.RemoveAt(trypos);
+                        if (count == 0) count = tryCounts.Pop();
+                        if (count > 0)
+                        {
+                            count--;
+                            expression.tokens.Insert(trypos, tryTokens.Peek());
+                            goto reparse;
+                        }
+                    }
+                    else
+                    {
+                        errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
+                    }
                 }
             }
             catch (KeyNotFoundException)
             {
+                reparse:
+                Context.CreateBackup();
                 foreach (TokensTemplate template in flexTemplates)
                 {
                     TokensReader backup = new TokensReader();
@@ -1012,7 +1050,23 @@ namespace TokensBuilder
                     }
                     catch { expression = backup; }
                 }
-                errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
+                Context.ReturnBackup();
+                if (!tryTokens.IsEmpty())
+                {
+                    if (trypos < 0) trypos = tryPositions.Pop();
+                    expression.tokens.RemoveAt(trypos);
+                    if (count == 0) count = tryCounts.Pop();
+                    if (count > 0)
+                    {
+                        count--;
+                        expression.tokens.Insert(trypos, tryTokens.Peek());
+                        goto reparse;
+                    }
+                }
+                else
+                {
+                    errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
+                }
             }
         }
 
@@ -1020,7 +1074,7 @@ namespace TokensBuilder
         {
             if (reader.tokens[pos] == TokenType.LITERAL)
             {
-                pos++;
+                //pos++;
                 string dname = reader.string_values.Peek();
                 try
                 {

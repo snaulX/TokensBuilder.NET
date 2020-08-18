@@ -4,18 +4,19 @@ using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
 using TokensBuilder.Errors;
+using GrEmit;
 
 namespace TokensBuilder
 {
     public sealed class FunctionBuilder
     {
         public bool IsEmpty => methodBuilder == null && constructorBuilder == null;
-        public MethodBuilder methodBuilder = null;
-        public ConstructorBuilder constructorBuilder = null;
-        public FuncType type = FuncType.DEFAULT;
-        public Dictionary<string, LocalBuilder> localVariables = new Dictionary<string, LocalBuilder>(),
-            localFinals = new Dictionary<string, LocalBuilder>();
-        public ParameterAttributes parameterAttributes = ParameterAttributes.None;
+        public MethodBuilder methodBuilder;
+        public ConstructorBuilder constructorBuilder;
+        public FuncType type;
+        public Dictionary<string, LocalBuilder> localVariables, localFinals;
+        public ParameterAttributes parameterAttributes;
+        public GroboIL ilgen;
         public ILGenerator generator => constructorBuilder == null ? methodBuilder.GetILGenerator() : constructorBuilder.GetILGenerator();
         private Generator gen => TokensBuilder.gen;
 
@@ -48,14 +49,27 @@ namespace TokensBuilder
             }
         }
 
-        public FunctionBuilder(MethodBuilder methodBuilder)
+        public FunctionBuilder(MethodBuilder methodBuilder) : this()
         {
             this.methodBuilder = methodBuilder;
+            ilgen = new GroboIL(methodBuilder);
         }
 
-        public FunctionBuilder(ConstructorBuilder constructorBuilder)
+        public FunctionBuilder(ConstructorBuilder constructorBuilder) : this()
         {
             this.constructorBuilder = constructorBuilder;
+            ilgen = new GroboIL(constructorBuilder);
+        }
+
+        public FunctionBuilder()
+        {
+            localVariables = new Dictionary<string, LocalBuilder>();
+            localFinals = new Dictionary<string, LocalBuilder>();
+            methodBuilder = null;
+            constructorBuilder = null;
+            type = FuncType.DEFAULT;
+            parameterAttributes = ParameterAttributes.None;
+            ilgen = null;
         }
 
         public void SetAttribute(CustomAttributeBuilder attribute)
@@ -64,6 +78,17 @@ namespace TokensBuilder
                 methodBuilder.SetCustomAttribute(attribute);
             else
                 constructorBuilder.SetCustomAttribute(attribute);
+        }
+
+        public void Assign(FunctionBuilder fb)
+        {
+            methodBuilder = fb.methodBuilder;
+            constructorBuilder = fb.constructorBuilder;
+            parameterAttributes = fb.parameterAttributes;
+            type = fb.type;
+            localFinals = fb.localFinals;
+            localVariables = fb.localVariables;
+            ilgen = fb.ilgen;
         }
 
         public void End()

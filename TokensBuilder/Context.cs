@@ -6,6 +6,7 @@ using TokensAPI;
 using TokensBuilder.Errors;
 using TokensStandart;
 using System.Linq;
+using GrEmit;
 
 namespace TokensBuilder
 {
@@ -23,9 +24,10 @@ namespace TokensBuilder
             set => _classBuilder = value;
         }
         public static FunctionBuilder functionBuilder => classBuilder.methodBuilder;
+        private static FunctionBuilder backup = new FunctionBuilder();
         public static bool isFuncBody => functionBuilder != null && !functionBuilder.IsEmpty;
         private static Generator gen => TokensBuilder.gen;
-        private static ILGenerator ilg => functionBuilder.generator;
+        private static ILGenerator ilg => classBuilder.methodBuilder.generator;
         public static readonly CustomAttributeBuilder entrypointAttr = new CustomAttributeBuilder(
                         typeof(EntrypointAttribute).GetConstructor(Type.EmptyTypes), new object[] { }),
             scriptAttr = new CustomAttributeBuilder(
@@ -373,25 +375,25 @@ namespace TokensBuilder
                     if (callerType.IsNumber())
                         ilg.Emit(OpCodes.Add);
                     else
-                        callerType.GetMethod("op_Addition");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_Addition"));
                     break;
                 case OperatorType.SUB:
                     if (callerType.IsNumber())
                         ilg.Emit(OpCodes.Sub);
                     else
-                        callerType.GetMethod("op_Substraction");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_Substraction"));
                     break;
                 case OperatorType.MUL:
                     if (callerType.IsNumber())
                         ilg.Emit(OpCodes.Mul);
                     else
-                        callerType.GetMethod("op_Multiply");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_Multiply"));
                     break;
                 case OperatorType.DIV:
                     if (callerType.IsNumber())
                         ilg.Emit(OpCodes.Div);
                     else
-                        callerType.GetMethod("op_Division");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_Division"));
                     break;
                 case OperatorType.MOD:
                     if (callerType.IsNumber())
@@ -404,7 +406,7 @@ namespace TokensBuilder
                     if (callerType.IsNumber() || callerType == typeof(bool))
                         ilg.Emit(OpCodes.Ceq);
                     else
-                        callerType.GetMethod("op_Equality");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_Equality"));
                     break;
                 case OperatorType.NOTEQ:
                     if (callerType.IsNumber() || callerType == typeof(bool))
@@ -413,7 +415,7 @@ namespace TokensBuilder
                         ilg.Emit(OpCodes.Not);
                     }
                     else
-                        callerType.GetMethod("op_Inequality");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_Inequality"));
                     break;
                 case OperatorType.AND:
                     if (callerType == typeof(bool))
@@ -436,27 +438,27 @@ namespace TokensBuilder
                     if (callerType.IsNumber())
                         ilg.Emit(OpCodes.Cgt);
                     else
-                        callerType.GetMethod("op_GreaterThan");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_GreaterThan"));
                     break;
                 case OperatorType.LT:
                     if (callerType.IsNumber())
                         ilg.Emit(OpCodes.Clt);
                     else
-                        callerType.GetMethod("op_LessThan");
+                        ilg.Emit(OpCodes.Call, callerType.GetMethod("op_LessThan"));
                     break;
                 case OperatorType.IN:
                     break;
                 case OperatorType.GORE:
                     //if (callerType.IsNumber())
-                        //ilg.Emit(OpCodes.Cgt);
+                    //ilg.Emit(OpCodes.Cgt);
                     //else
-                    callerType.GetMethod("op_GreaterThanOrEqual");
+                    ilg.Emit(OpCodes.Call, callerType.GetMethod("op_GreaterThanOrEqual"));
                     break;
                 case OperatorType.LORE:
                     //if (callerType.IsNumber())
-                        //ilg.Emit(OpCodes.Clt);
+                    //ilg.Emit(OpCodes.Clt);
                     //else
-                    callerType.GetMethod("op_LessThanOrEqual");
+                    ilg.Emit(OpCodes.Call, callerType.GetMethod("op_LessThanOrEqual"));
                     break;
                 case OperatorType.RANGE:
                     break;
@@ -470,6 +472,16 @@ namespace TokensBuilder
             }
         }
         #endregion
+
+        public static void CreateBackup()
+        {
+            backup.Assign(functionBuilder);
+        }
+
+        public static void ReturnBackup()
+        {
+            classBuilder.methodBuilder.Assign(backup);
+        }
 
         public static void Finish()
         {
