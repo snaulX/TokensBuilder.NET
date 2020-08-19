@@ -15,7 +15,8 @@ namespace TokensBuilder
         SetField,
         LoadLocal,
         SetLocal,
-        LoadOperator
+        LoadOperator,
+        NewObject
     }
 
     public static class LaterCalls
@@ -30,7 +31,9 @@ namespace TokensBuilder
         static List<OperatorType> loadOperators = new List<OperatorType>();
         static List<bool> dontPops = new List<bool>();
         static List<MethodInfo> callMethods = new List<MethodInfo>();
+        static List<ConstructorInfo> newObjects = new List<ConstructorInfo>();
 
+        #region Operations
         public static void LoadObject(object value)
         {
             orderCalls.Add(CallType.LoadObject);
@@ -75,6 +78,13 @@ namespace TokensBuilder
             loadOperators.Add(op);
         }
 
+        public static void NewObject(ConstructorInfo ctor)
+        {
+            orderCalls.Add(CallType.NewObject);
+            newObjects.Add(ctor);
+        }
+        #endregion
+
         public static void Call()
         {
             foreach (CallType callType in orderCalls)
@@ -101,6 +111,9 @@ namespace TokensBuilder
                         break;
                     case CallType.LoadOperator:
                         Context.LoadOperator(loadCallerTypesOperators.Pop(), loadOperators.Pop());
+                        break;
+                    case CallType.NewObject:
+                        Context.NewObject(newObjects.Pop());
                         break;
                 }
             }
@@ -133,6 +146,9 @@ namespace TokensBuilder
                 case CallType.LoadOperator:
                     loadOperators.RemoveLast();
                     loadCallerTypesOperators.RemoveLast();
+                    break;
+                case CallType.NewObject:
+                    newObjects.RemoveLast();
                     break;
             }
         }

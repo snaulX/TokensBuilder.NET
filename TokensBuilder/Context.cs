@@ -6,7 +6,6 @@ using TokensAPI;
 using TokensBuilder.Errors;
 using TokensStandart;
 using System.Linq;
-using GrEmit;
 
 namespace TokensBuilder
 {
@@ -465,6 +464,14 @@ namespace TokensBuilder
                         gen.line, $"Operator {op} cannot using between two values"));
                     break;
             }
+        }
+
+        public static void NewObject(ConstructorInfo constructor)
+        {
+            if (constructor != null)
+                ilg.Emit(OpCodes.Newobj, constructor);
+            else
+                TokensBuilder.Error(new TypeNotFoundError(gen.line, "Constructor not found given with operator 'new'"));
         }
         #endregion
 

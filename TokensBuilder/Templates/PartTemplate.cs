@@ -16,56 +16,18 @@ namespace TokensBuilder.Templates
         public static FieldInfo ParseField(ref TokensReader expression)
         {
             errors = new List<TokensError>();
-            TokenType token = expression.tokens.Pop();
-            if (token == TokenType.LITERAL)
+            string varName = ParseLiterals(ref expression);
+            if (varName != null)
             {
-                bool mustLiteral = true;
-                StringBuilder varName = new StringBuilder();
-                while (token == TokenType.LITERAL || token == TokenType.SEPARATOR)
+                FieldInfo field = Context.GetVarByName(varName);
+                if (field == null)
                 {
-                    if (mustLiteral && token == TokenType.LITERAL)
-                    {
-                        varName.Append(expression.string_values.Pop());
-                        mustLiteral = false;
-                    }
-                    else if (!mustLiteral && token == TokenType.SEPARATOR)
-                    {
-                        mustLiteral = true;
-                        if (expression.bool_values.Pop())
-                            varName.Append(".");
-                        else
-                        {
-                            expression.bool_values.Insert(0, false);
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
-                    token = expression.tokens.Pop();
+                    errors.Add(new VarNotFoundError(line, $"Field with name {varName} not found"));
                 }
-                if (mustLiteral)
-                {
-                    errors.Add(new InvalidTokenError(line, "After separator must be literal"));
-                    return null;
-                }
-                else
-                {
-                    expression.tokens.Insert(0, token);
-                    FieldInfo field = Context.GetVarByName(varName.ToString());
-                    if (field == null)
-                    {
-                        errors.Add(new VarNotFoundError(line, $"Field with name {varName} not found"));
-                    }
-                    return field;
-                }
+                return field;
             }
             else
-            {
-                expression.tokens.Insert(0, token);
-            }
-            return null;
+                return null;
         }
 
         public static LocalBuilder ParseLocal(ref TokensReader expression)
@@ -168,6 +130,54 @@ namespace TokensBuilder.Templates
                 return null;
         }
 
+        public static string ParseLiterals(ref TokensReader expression)
+        {
+            TokenType token = expression.tokens.Pop();
+            if (token == TokenType.LITERAL)
+            {
+                bool mustLiteral = true;
+                StringBuilder literals = new StringBuilder();
+                while (token == TokenType.LITERAL || token == TokenType.SEPARATOR)
+                {
+                    if (mustLiteral && token == TokenType.LITERAL)
+                    {
+                        literals.Append(expression.string_values.Pop());
+                        mustLiteral = false;
+                    }
+                    else if (!mustLiteral && token == TokenType.SEPARATOR)
+                    {
+                        mustLiteral = true;
+                        if (expression.bool_values.Pop())
+                            literals.Append(".");
+                        else
+                        {
+                            expression.bool_values.Insert(0, false);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                    token = expression.tokens.Pop();
+                }
+                if (mustLiteral)
+                {
+                    errors.Add(new InvalidTokenError(line, "After separator must be literal"));
+                }
+                else
+                {
+                    expression.tokens.Insert(0, token);
+                    return literals.ToString();
+                }
+            }
+            else
+            {
+                expression.tokens.Insert(0, token);
+            }
+            return null;
+        }
+
         public static Type ParseValue(ref TokensReader expression)
         {
             Type type = null;
@@ -224,6 +234,63 @@ namespace TokensBuilder.Templates
                             line, $"Type {type} before operator {op} not equals type of value after operator"));
                 }
                 TokensBuilder.gen.errors.AddRange(errors);
+            }
+            else if (token == TokenType.NEW)
+            {
+                string ctorName = ParseLiterals(ref expression);
+                if (ctorName != null)
+                {
+                    type = Context.GetTypeByName(ctorName);
+                    token = expression.tokens.Pop();
+                    if (token == TokenType.STATEMENT)
+                    {
+                        if (expression.bool_values.Pop())
+                        {
+                            token = expression.tokens.Pop();
+                            if (token == TokenType.STATEMENT && !expression.bool_values.Pop()) // empty arguments
+                            {
+                                ConstructorInfo ctor = type.GetConstructor(Type.EmptyTypes);
+                                LaterCalls.NewObject(type.GetConstructor(Type.EmptyTypes));
+                                return type;
+                            }
+                            else
+                            {
+                                expression.tokens.Insert(0, token);
+                                List<Type> paramTypes = new List<Type>();
+                                parse_param:
+                                Type paramType = ParseValue(ref expression);
+                                if (paramType == null)
+                                    return null;
+                                else
+                                {
+                                    paramTypes.Add(paramType);
+                                    token = expression.tokens.Pop();
+                                    if (token == TokenType.STATEMENT)
+                                    {
+                                        if (!expression.bool_values.Pop())
+                                        {
+                                            LaterCalls.NewObject(type.GetConstructor(paramTypes.ToArray()));
+                                            return type;
+                                        }
+                                        else
+                                            expression.bool_values.Insert(0, true);
+                                    }
+                                    else if (token == TokenType.SEPARATOR && !expression.bool_values.Pop())
+                                        goto parse_param;
+                                    else
+                                        return null;
+                                }
+                                return null;
+                            }
+                        }
+                        else
+                            errors.Add(new InvalidTokenError(
+                                line, $"After constructor name must stay open statement (not close)"));
+                    }
+                    else
+                        errors.Add(new InvalidTokenError(
+                            line, $"After constructor name must stay open statement (not {token})"));
+                }
             }
             return type;
         }
