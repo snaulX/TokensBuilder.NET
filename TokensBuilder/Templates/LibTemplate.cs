@@ -17,7 +17,7 @@ namespace TokensBuilder.Templates
         public List<TokensError> Run(TokensReader expression)
         {
             List<TokensError> errors = new List<TokensError>();
-            string path = expression.string_values.Peek();
+            string path = expression.string_values.Pop();
             try
             {
                 if (path.StartsWith("<")) library.SetPath(path.Remove(path.Length - 2) + ".tokens");

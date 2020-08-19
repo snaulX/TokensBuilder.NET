@@ -73,11 +73,19 @@ namespace TokensBuilder
 
         public static bool IsEmpty<T>(this IEnumerable<T> collection) => collection.Count() == 0;
 
-        public static T Peek<T>(this List<T> collection)
+        public static T Pop<T>(this IList<T> collection)
         {
             T elem = collection[0];
             collection.RemoveAt(0);
             return elem;
+        }
+
+        public static T RemoveLast<T>(this IList<T> collection)
+        {
+            int index = collection.Count - 1;
+            T last = collection[index];
+            collection.RemoveAt(index);
+            return last;
         }
 
         public static bool IsNumber(this Type t)

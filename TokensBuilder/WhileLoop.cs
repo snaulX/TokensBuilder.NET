@@ -31,14 +31,14 @@ namespace TokensBuilder
                 if (generator.tryDirective)
                 {
                     int errlen = generator.errors.Count;
-                    generator.ParseToken(generator.reader.tokens.Peek());
+                    generator.ParseToken(generator.reader.tokens.Pop());
                     if (generator.errors.Count > errlen)
                         generator.errors.RemoveRange(errlen, generator.errors.Count);
                     //tryDirective = false;
                 }
                 else
                 {
-                    TokenType tt = generator.reader.tokens.Peek();
+                    TokenType tt = generator.reader.tokens.Pop();
                     generator.ParseToken(tt);
                     generator.prev = tt;
                 }

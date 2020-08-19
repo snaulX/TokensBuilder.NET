@@ -123,11 +123,11 @@ namespace TokensBuilder
         {
             directives.Add("extends", () =>
             {
-                TokenType curToken = reader.tokens.Peek();
+                TokenType curToken = reader.tokens.Pop();
                 if (curToken == TokenType.LITERAL)
                 {
                     if (Config.header == HeaderType.CLASS)
-                        Context.mainClass.Extends(reader.string_values.Peek());
+                        Context.mainClass.Extends(reader.string_values.Pop());
                     else
                         errors.Add(new InvalidHeaderError(line, Config.header, "extends directive can be only with class header"));
                 }
@@ -142,7 +142,7 @@ namespace TokensBuilder
                 while (tokenType != TokenType.NEWLN)
                 {
                     if (Config.header == HeaderType.CLASS)
-                        Context.mainClass.Implements(reader.string_values.Peek());
+                        Context.mainClass.Implements(reader.string_values.Pop());
                     else
                         errors.Add(new InvalidHeaderError(line, Config.header, "implements directive can be only with class header"));
                 }
@@ -158,7 +158,7 @@ namespace TokensBuilder
             });
             directives.Add("outtype", () =>
             {
-                string outType = reader.string_values.Peek();
+                string outType = reader.string_values.Pop();
                 if (!Enum.TryParse(outType, out Config.outputType))
                 {
                     errors.Add(new InvalidOutTypeError(line, outType));
@@ -269,7 +269,7 @@ namespace TokensBuilder
 
         private void ParseStatement()
         {
-            if (reader.bool_values.Peek()) // open statement
+            if (reader.bool_values.Pop()) // open statement
             {
                 needEndStatement++;
                 if (prev == TokenType.LITERAL)
@@ -522,7 +522,7 @@ namespace TokensBuilder
         private void ParseValue()
         {
             bool needAdd = insertOp == 2 || putLoopStatement;
-            switch (reader.byte_values.Peek())
+            switch (reader.byte_values.Pop())
             {
                 case 0:
                     if (needAdd) parameterTypes.Peek().Add(typeof(object));
@@ -530,42 +530,42 @@ namespace TokensBuilder
                     break;
                 case 1:
                     if (needAdd) parameterTypes.Peek().Add(typeof(int));
-                    int val = (int)reader.values.Peek();
+                    int val = (int)reader.values.Pop();
                     if (val <= sbyte.MaxValue && val >= sbyte.MinValue) gen.Emit(OpCodes.Ldc_I4_S, val);
                     else gen.Emit(OpCodes.Ldc_I4, val);
                     break;
                 case 2:
                     if (needAdd) parameterTypes.Peek().Add(typeof(string));
-                    gen.Emit(OpCodes.Ldstr, (string)reader.values.Peek());
+                    gen.Emit(OpCodes.Ldstr, (string)reader.values.Pop());
                     break;
                 case 3:
                     if (needAdd) parameterTypes.Peek().Add(typeof(sbyte));
-                    gen.Emit(OpCodes.Ldc_I4_S, (sbyte)reader.values.Peek());
+                    gen.Emit(OpCodes.Ldc_I4_S, (sbyte)reader.values.Pop());
                     break;
                 case 4:
                     if (needAdd) parameterTypes.Peek().Add(typeof(bool));
-                    if ((bool)reader.values.Peek()) gen.Emit(OpCodes.Ldc_I4_1);
+                    if ((bool)reader.values.Pop()) gen.Emit(OpCodes.Ldc_I4_1);
                     else gen.Emit(OpCodes.Ldc_I4_0);
                     break;
                 case 5:
                     if (needAdd) parameterTypes.Peek().Add(typeof(char));
-                    gen.Emit(OpCodes.Ldc_I4, (char)reader.values.Peek());
+                    gen.Emit(OpCodes.Ldc_I4, (char)reader.values.Pop());
                     break;
                 case 6:
                     if (needAdd) parameterTypes.Peek().Add(typeof(float));
-                    gen.Emit(OpCodes.Ldc_R4, (float)reader.values.Peek());
+                    gen.Emit(OpCodes.Ldc_R4, (float)reader.values.Pop());
                     break;
                 case 7:
                     if (needAdd) parameterTypes.Peek().Add(typeof(short));
-                    gen.Emit(OpCodes.Ldc_I4, (short)reader.values.Peek());
+                    gen.Emit(OpCodes.Ldc_I4, (short)reader.values.Pop());
                     break;
                 case 8:
                     if (needAdd) parameterTypes.Peek().Add(typeof(long));
-                    gen.Emit(OpCodes.Ldc_I8, (long)reader.values.Peek());
+                    gen.Emit(OpCodes.Ldc_I8, (long)reader.values.Pop());
                     break;
                 case 9:
                     if (needAdd) parameterTypes.Peek().Add(typeof(double));
-                    gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Peek());
+                    gen.Emit(OpCodes.Ldc_R8, (double)reader.values.Pop());
                     break;
             }
         }
@@ -624,7 +624,7 @@ namespace TokensBuilder
             else if (extends)
             {
                 if (token == TokenType.LITERAL)
-                    Context.classBuilder.Extends(reader.string_values.Peek());
+                    Context.classBuilder.Extends(reader.string_values.Pop());
                 else
                     errors.Add(new InvalidTokenError(line, TokenType.LITERAL));
                 extends = false;
@@ -643,7 +643,7 @@ namespace TokensBuilder
                 }
                 else
                 {
-                    Context.classBuilder.Implements(reader.string_values.Peek());
+                    Context.classBuilder.Implements(reader.string_values.Pop());
                     needSeparator = true;
                 }
             }
@@ -670,8 +670,8 @@ namespace TokensBuilder
                         break;
                     case TokenType.CLASS:
                         Context.classBuilder =
-                            new ClassBuilder(reader.string_values.Peek(), currentNamespace,
-                            reader.class_types.Peek(), reader.securities.Peek());
+                            new ClassBuilder(reader.string_values.Pop(), currentNamespace,
+                            reader.class_types.Pop(), reader.securities.Pop());
                         initClass = true;
                         if (isFuncBody)
                             Context.functionBuilder.End();
@@ -690,7 +690,7 @@ namespace TokensBuilder
                         }
                         break;
                     case TokenType.BLOCK:
-                        if (reader.bool_values.Peek())
+                        if (reader.bool_values.Pop())
                         {
                             needEndBlock++;
                             if (initClass)
@@ -732,11 +732,11 @@ namespace TokensBuilder
                         ParseStatement();
                         break;
                     case TokenType.SEQUENCE:
-                        if (reader.bool_values.Peek()) needEndSequence++;
+                        if (reader.bool_values.Pop()) needEndSequence++;
                         else needEndSequence--;
                         break;
                     case TokenType.LITERAL:
-                        string literal = reader.string_values.Peek();
+                        string literal = reader.string_values.Pop();
                         if (isDirective)
                         {
                             try
@@ -752,7 +752,7 @@ namespace TokensBuilder
                         literals.Add(literal);
                         break;
                     case TokenType.SEPARATOR:
-                        bool expression = reader.bool_values.Peek();
+                        bool expression = reader.bool_values.Pop();
                         if (expression) // literal separator - .
                         {
                             if (literals.IsEmpty())
@@ -776,7 +776,7 @@ namespace TokensBuilder
                         needAssign = false;
                         break;
                     case TokenType.LOOP:
-                        LoopType ltype = reader.loops.Peek();
+                        LoopType ltype = reader.loops.Pop();
                         if (ltype == LoopType.WHILE) loops.Push(new WhileLoop());
                         else if (ltype == LoopType.DO) loops.Push(new DoWhileLoop());
                         break;
@@ -787,7 +787,7 @@ namespace TokensBuilder
                     case TokenType.LOOP_OPERATOR:
                         break;
                     case TokenType.OPERATOR:
-                        needOperator = reader.operators.Peek();
+                        needOperator = reader.operators.Pop();
                         insertOp = 0;
                         break;
                     case TokenType.VALUE:
@@ -824,21 +824,21 @@ namespace TokensBuilder
                         needReturn = true;
                         break;
                     case TokenType.ACTUAL:
-                        isActual = reader.bool_values.Peek();
+                        isActual = reader.bool_values.Pop();
                         break;
                     case TokenType.TYPEOF:
                         break;
                     case TokenType.NAMESPACE:
-                        currentNamespace = reader.string_values.Peek();
+                        currentNamespace = reader.string_values.Pop();
                         break;
                     case TokenType.IMPORT_LIBRARY:
-                        ParseTokensLibrary(reader.string_values.Peek());
+                        ParseTokensLibrary(reader.string_values.Pop());
                         break;
                     case TokenType.USING_NAMESPACE:
-                        usingNamespaces.Add(reader.string_values.Peek());
+                        usingNamespaces.Add(reader.string_values.Pop());
                         break;
                     case TokenType.INCLUDE:
-                        Include(reader.string_values.Peek());
+                        Include(reader.string_values.Pop());
                         break;
                     case TokenType.BREAKPOINT:
                         gen.Emit(OpCodes.Break);
@@ -865,10 +865,10 @@ namespace TokensBuilder
                     case TokenType.LAMBDA:
                         break;
                     case TokenType.ASYNC:
-                        bool async = reader.bool_values.Peek();
+                        bool async = reader.bool_values.Pop();
                         break;
                     case TokenType.PARAMETER_TYPE:
-                        bool type = reader.bool_values.Peek();
+                        bool type = reader.bool_values.Pop();
                         break;
                     case TokenType.REF:
                         break;
@@ -911,7 +911,7 @@ namespace TokensBuilder
                     if (token == TokenType.EXPRESSION_END) exprend = true;
                     else
                     {
-                        if (reader.bool_values.Peek())
+                        if (reader.bool_values.Pop())
                         {
                             exprend = false;
                             needEndBlock++;
@@ -934,51 +934,51 @@ namespace TokensBuilder
                     if (!tryDirective) expression.tokens.Add(token);
                     if (token == TokenType.CLASS)
                     {
-                        expression.string_values.Add(reader.string_values.Peek());
-                        expression.class_types.Add(reader.class_types.Peek());
-                        expression.securities.Add(reader.securities.Peek());
+                        expression.string_values.Add(reader.string_values.Pop());
+                        expression.class_types.Add(reader.class_types.Pop());
+                        expression.securities.Add(reader.securities.Pop());
                     }
                     else if (token == TokenType.FUNCTION)
                     {
-                        expression.string_values.Add(reader.string_values.Peek());
-                        expression.string_values.Add(reader.string_values.Peek());
-                        expression.function_types.Add(reader.function_types.Peek());
-                        expression.securities.Add(reader.securities.Peek());
+                        expression.string_values.Add(reader.string_values.Pop());
+                        expression.string_values.Add(reader.string_values.Pop());
+                        expression.function_types.Add(reader.function_types.Pop());
+                        expression.securities.Add(reader.securities.Pop());
                     }
                     else if (token == TokenType.VAR)
                     {
-                        expression.var_types.Add(reader.var_types.Peek());
-                        expression.securities.Add(reader.securities.Peek());
+                        expression.var_types.Add(reader.var_types.Pop());
+                        expression.securities.Add(reader.securities.Pop());
                     }
                     else if (token == TokenType.STATEMENT || token == TokenType.SEQUENCE || token == TokenType.SEPARATOR
                         || token == TokenType.RETURN || token == TokenType.LAMBDA || token == TokenType.ASYNC
                         || token == TokenType.PARAMETER_TYPE || token == TokenType.GENERIC || token == TokenType.ACTUAL)
                     {
-                        expression.bool_values.Add(reader.bool_values.Peek());
+                        expression.bool_values.Add(reader.bool_values.Pop());
                     }
                     else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.NAMESPACE
                         || token == TokenType.IMPORT_LIBRARY || token == TokenType.INCLUDE || token == TokenType.USING_NAMESPACE
                         || token == TokenType.INSTANCEOF || token == TokenType.GOTO || token == TokenType.LABEL)
                     {
-                        expression.string_values.Add(reader.string_values.Peek());
+                        expression.string_values.Add(reader.string_values.Pop());
                     }
                     else if (token == TokenType.LOOP)
                     {
-                        expression.loops.Add(reader.loops.Peek());
+                        expression.loops.Add(reader.loops.Pop());
                     }
                     else if (token == TokenType.LOOP_OPERATOR)
                     {
-                        expression.bool_values.Add(reader.bool_values.Peek());
-                        expression.string_values.Add(reader.string_values.Peek());
+                        expression.bool_values.Add(reader.bool_values.Pop());
+                        expression.string_values.Add(reader.string_values.Pop());
                     }
                     else if (token == TokenType.OPERATOR)
                     {
-                        expression.operators.Add(reader.operators.Peek());
+                        expression.operators.Add(reader.operators.Pop());
                     }
                     else if (token == TokenType.VALUE)
                     {
-                        expression.byte_values.Add(reader.byte_values.Peek());
-                        expression.values.Add(reader.values.Peek());
+                        expression.byte_values.Add(reader.byte_values.Pop());
+                        expression.values.Add(reader.values.Pop());
                     }
                 }
             }
@@ -989,7 +989,6 @@ namespace TokensBuilder
             {
                 if (expression.tokens.IsEmpty()) return;
                 reparse:
-                Context.CreateBackup();
                 TokensTemplate template = strongTemplates[expression.tokens[0]];
                 try
                 {
@@ -1011,16 +1010,16 @@ namespace TokensBuilder
                 }
                 if (error)
                 {
-                    Context.ReturnBackup();
                     if (!tryTokens.IsEmpty())
                     {
+                        LaterCalls.RemoveLast();
                         if (trypos < 0) trypos = tryPositions.Pop();
                         expression.tokens.RemoveAt(trypos);
                         if (count == 0) count = tryCounts.Pop();
                         if (count > 0)
                         {
                             count--;
-                            expression.tokens.Insert(trypos, tryTokens.Peek());
+                            expression.tokens.Insert(trypos, tryTokens.Pop());
                             goto reparse;
                         }
                     }
@@ -1033,7 +1032,6 @@ namespace TokensBuilder
             catch (KeyNotFoundException)
             {
                 reparse:
-                Context.CreateBackup();
                 foreach (TokensTemplate template in flexTemplates)
                 {
                     TokensReader backup = new TokensReader();
@@ -1050,16 +1048,16 @@ namespace TokensBuilder
                     }
                     catch { expression = backup; }
                 }
-                Context.ReturnBackup();
                 if (!tryTokens.IsEmpty())
                 {
+                    LaterCalls.RemoveLast();
                     if (trypos < 0) trypos = tryPositions.Pop();
                     expression.tokens.RemoveAt(trypos);
                     if (count == 0) count = tryCounts.Pop();
                     if (count > 0)
                     {
                         count--;
-                        expression.tokens.Insert(trypos, tryTokens.Peek());
+                        expression.tokens.Insert(trypos, tryTokens.Pop());
                         goto reparse;
                     }
                 }
@@ -1068,6 +1066,10 @@ namespace TokensBuilder
                     errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
                 }
             }
+            finally
+            {
+                if (isFuncBody) LaterCalls.Call();
+            }
         }
 
         public int ParseDirective(int pos)
@@ -1075,7 +1077,7 @@ namespace TokensBuilder
             if (reader.tokens[pos] == TokenType.LITERAL)
             {
                 //pos++;
-                string dname = reader.string_values.Peek();
+                string dname = reader.string_values.Pop();
                 try
                 {
                     directives[dname]();
@@ -1114,7 +1116,7 @@ namespace TokensBuilder
             loops.Peek().statementCode.tokens.Add(token);
             if (token == TokenType.STATEMENT)
             {
-                bool open = reader.bool_values.Peek();
+                bool open = reader.bool_values.Pop();
                 if (needEndStatement == loopStatement && !open)
                 {
                     loops.Peek().statementCode.bool_values.Add(false);
@@ -1137,20 +1139,20 @@ namespace TokensBuilder
             }
             else if (token == TokenType.SEQUENCE || token == TokenType.SEPARATOR)
             {
-                loops.Peek().statementCode.bool_values.Add(reader.bool_values.Peek());
+                loops.Peek().statementCode.bool_values.Add(reader.bool_values.Pop());
             }
             else if (token == TokenType.LITERAL || token == TokenType.TYPEOF || token == TokenType.INSTANCEOF)
             {
-                loops.Peek().statementCode.string_values.Add(reader.string_values.Peek());
+                loops.Peek().statementCode.string_values.Add(reader.string_values.Pop());
             }
             else if (token == TokenType.VALUE)
             {
-                loops.Peek().statementCode.byte_values.Add(reader.byte_values.Peek());
-                loops.Peek().statementCode.values.Add(reader.values.Peek());
+                loops.Peek().statementCode.byte_values.Add(reader.byte_values.Pop());
+                loops.Peek().statementCode.values.Add(reader.values.Pop());
             }
             else if (token == TokenType.OPERATOR)
             {
-                loops.Peek().statementCode.operators.Add(reader.operators.Peek());
+                loops.Peek().statementCode.operators.Add(reader.operators.Pop());
             }
             return false;
         }

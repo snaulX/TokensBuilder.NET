@@ -67,7 +67,7 @@ namespace TokensBuilder
                             Context.CreateField();
                             break;
                         case TokenType.ACTUAL:
-                            bool _actual = gen.reader.bool_values.Peek();
+                            bool _actual = gen.reader.bool_values.Pop();
                             if (!actual.HasValue)
                                 TokensBuilder.Error(new TokensError(gen.line,
                                     "Cannot be use " + (_actual ? "actual" : "expect") + " fields in default class"));

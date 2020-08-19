@@ -13,7 +13,7 @@ namespace TokensBuilder.Templates
 
         public List<TokensError> Run(TokensReader expression)
         {
-            TokensBuilder.gen.currentNamespace = expression.string_values.Peek();
+            TokensBuilder.gen.currentNamespace = expression.string_values.Pop();
             return new List<TokensError>();
         }
     }

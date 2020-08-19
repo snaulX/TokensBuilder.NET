@@ -18,7 +18,7 @@ namespace TokensBuilder.Templates
             field = null;
             local = null;
             valuetype = null;
-            if (expression.tokens.Peek() == TokenType.LITERAL && expression_end)
+            if (expression.tokens.Pop() == TokenType.LITERAL && expression_end)
             {
                 expression.tokens.Insert(0, TokenType.LITERAL);
                 TokensReader backup = new TokensReader();
@@ -30,7 +30,7 @@ namespace TokensBuilder.Templates
                     field = PartTemplate.ParseField(ref expression);
                 }
 
-                if (expression.tokens.Peek() == TokenType.OPERATOR && expression.operators.Peek() == OperatorType.ASSIGN)
+                if (expression.tokens.Pop() == TokenType.OPERATOR && expression.operators.Pop() == OperatorType.ASSIGN)
                 {
                     valuetype = PartTemplate.ParseValue(ref expression);
                     if (expression.tokens.Count == 0)
@@ -51,7 +51,7 @@ namespace TokensBuilder.Templates
             if (local == null) // is field
             {
                 if (field.FieldType == valuetype)
-                    Context.SetField(field);
+                    LaterCalls.SetField(field);
                 else
                     errors.Add(new InvalidTypeError(TokensBuilder.gen.line,
                         $"Type of value {valuetype} not equals type of getted field {field.FieldType} for assign"));
@@ -60,7 +60,7 @@ namespace TokensBuilder.Templates
             {
                 if (local.LocalType == valuetype)
                 {
-                    Context.SetLocal(local);
+                    LaterCalls.SetLocal(local);
                 }
                 else
                     errors.Add(new InvalidTypeError(TokensBuilder.gen.line,

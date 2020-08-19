@@ -20,7 +20,7 @@ namespace TokensBuilder.Templates
         public List<TokensError> Run(TokensReader expression)
         {
             List<TokensError> errors = new List<TokensError>();
-            libPath = expression.string_values.Peek();
+            libPath = expression.string_values.Pop();
             uint line = TokensBuilder.gen.line;
             try
             {

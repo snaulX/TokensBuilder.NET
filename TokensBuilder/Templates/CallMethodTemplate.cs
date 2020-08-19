@@ -23,7 +23,7 @@ namespace TokensBuilder.Templates
             paramTypes = new List<Type>();
             methname = "";
             typename = "";
-            TokenType token = expression.tokens.Peek();
+            TokenType token = expression.tokens.Pop();
             if (token == TokenType.LITERAL)
             {
                 bool mustLiteral = true;
@@ -33,20 +33,20 @@ namespace TokensBuilder.Templates
                 {
                     if (mustLiteral && token == TokenType.LITERAL)
                     {
-                        lastLiteral = expression.string_values.Peek();
+                        lastLiteral = expression.string_values.Pop();
                         mustLiteral = false;
                     }
                     else if (!mustLiteral && token == TokenType.SEPARATOR)
                     {
                         mustLiteral = true;
-                        if (expression.bool_values.Peek())
+                        if (expression.bool_values.Pop())
                             parentName.Append(lastLiteral + ".");
                         else
                             break;
                     }
                     else
                         break;
-                    token = expression.tokens.Peek();
+                    token = expression.tokens.Pop();
                 }
                 if (mustLiteral)
                     return false;
@@ -56,7 +56,7 @@ namespace TokensBuilder.Templates
                     else parentName.Length--; // delete last character - '.'
                     typename = parentName.ToString();
                     methname = lastLiteral;
-                    if (token == TokenType.STATEMENT && expression.bool_values.Peek())
+                    if (token == TokenType.STATEMENT && expression.bool_values.Pop())
                     {
                         if (expression.tokens[0] == TokenType.STATEMENT && !expression.bool_values[0])
                         {
@@ -74,10 +74,10 @@ namespace TokensBuilder.Templates
                             else
                             {
                                 paramTypes.Add(paramType);
-                                token = expression.tokens.Peek();
+                                token = expression.tokens.Pop();
                                 if (token == TokenType.STATEMENT)
                                 {
-                                    if (!expression.bool_values.Peek())
+                                    if (!expression.bool_values.Pop())
                                     {
                                         if (expression.tokens.Count == 0)
                                             return true;
@@ -87,7 +87,7 @@ namespace TokensBuilder.Templates
                                     else
                                         expression.bool_values.Insert(0, true);
                                 }
-                                else if (token == TokenType.SEPARATOR && !expression.bool_values.Peek())
+                                else if (token == TokenType.SEPARATOR && !expression.bool_values.Pop())
                                     goto parse_param;
                                 else
                                     return false;
@@ -113,7 +113,7 @@ namespace TokensBuilder.Templates
                     errors.Add(new InvalidMethodError(line, $"Method with name {typename + methname} not found"));
                 else
                 {
-                    Context.CallMethod(method, dontPop);
+                    LaterCalls.CallMethod(method, dontPop);
                 }
             }
             catch (NullReferenceException)

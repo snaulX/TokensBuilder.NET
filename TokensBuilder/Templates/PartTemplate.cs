@@ -16,7 +16,7 @@ namespace TokensBuilder.Templates
         public static FieldInfo ParseField(ref TokensReader expression)
         {
             errors = new List<TokensError>();
-            TokenType token = expression.tokens.Peek();
+            TokenType token = expression.tokens.Pop();
             if (token == TokenType.LITERAL)
             {
                 bool mustLiteral = true;
@@ -25,13 +25,13 @@ namespace TokensBuilder.Templates
                 {
                     if (mustLiteral && token == TokenType.LITERAL)
                     {
-                        varName.Append(expression.string_values.Peek());
+                        varName.Append(expression.string_values.Pop());
                         mustLiteral = false;
                     }
                     else if (!mustLiteral && token == TokenType.SEPARATOR)
                     {
                         mustLiteral = true;
-                        if (expression.bool_values.Peek())
+                        if (expression.bool_values.Pop())
                             varName.Append(".");
                         else
                         {
@@ -43,7 +43,7 @@ namespace TokensBuilder.Templates
                     {
                         break;
                     }
-                    token = expression.tokens.Peek();
+                    token = expression.tokens.Pop();
                 }
                 if (mustLiteral)
                 {
@@ -70,8 +70,8 @@ namespace TokensBuilder.Templates
 
         public static LocalBuilder ParseLocal(ref TokensReader expression)
         {
-            if (expression.tokens.Peek() == TokenType.LITERAL)
-                return Context.functionBuilder.GetLocal(expression.string_values.Peek());
+            if (expression.tokens.Pop() == TokenType.LITERAL)
+                return Context.functionBuilder.GetLocal(expression.string_values.Pop());
             else 
                 return null;
         }
@@ -80,7 +80,7 @@ namespace TokensBuilder.Templates
         {
             errors = new List<TokensError>();
             List<Type> paramTypes = new List<Type>();
-            TokenType token = expression.tokens.Peek();
+            TokenType token = expression.tokens.Pop();
             if (token == TokenType.LITERAL)
             {
                 bool mustLiteral = true;
@@ -90,20 +90,20 @@ namespace TokensBuilder.Templates
                 {
                     if (mustLiteral && token == TokenType.LITERAL)
                     {
-                        lastLiteral = expression.string_values.Peek();
+                        lastLiteral = expression.string_values.Pop();
                         mustLiteral = false;
                     }
                     else if (!mustLiteral && token == TokenType.SEPARATOR)
                     {
                         mustLiteral = true;
-                        if (expression.bool_values.Peek())
+                        if (expression.bool_values.Pop())
                             parentName.Append(lastLiteral + ".");
                         else
                             break;
                     }
                     else
                         break;
-                    token = expression.tokens.Peek();
+                    token = expression.tokens.Pop();
                 }
                 if (mustLiteral)
                     return null;
@@ -113,10 +113,10 @@ namespace TokensBuilder.Templates
                     else parentName.Length--; // delete last character - '.'
                     string typename = parentName.ToString();
                     string methname = lastLiteral;
-                    if (token == TokenType.STATEMENT && expression.bool_values.Peek()) // open arguments
+                    if (token == TokenType.STATEMENT && expression.bool_values.Pop()) // open arguments
                     {
-                        token = expression.tokens.Peek();
-                        if (token == TokenType.STATEMENT && !expression.bool_values.Peek()) // empty arguments
+                        token = expression.tokens.Pop();
+                        if (token == TokenType.STATEMENT && !expression.bool_values.Pop()) // empty arguments
                         {
                             CallMethodTemplate callMethod = new CallMethodTemplate();
                             callMethod.methname = methname;
@@ -136,10 +136,10 @@ namespace TokensBuilder.Templates
                             else
                             {
                                 paramTypes.Add(paramType);
-                                token = expression.tokens.Peek();
+                                token = expression.tokens.Pop();
                                 if (token == TokenType.STATEMENT)
                                 {
-                                    if (!expression.bool_values.Peek())
+                                    if (!expression.bool_values.Pop())
                                     {
                                         CallMethodTemplate callMethod = new CallMethodTemplate();
                                         callMethod.methname = methname;
@@ -152,7 +152,7 @@ namespace TokensBuilder.Templates
                                     else
                                         expression.bool_values.Insert(0, true);
                                 }
-                                else if (token == TokenType.SEPARATOR && !expression.bool_values.Peek())
+                                else if (token == TokenType.SEPARATOR && !expression.bool_values.Pop())
                                     goto parse_param;
                                 else
                                     return null;
@@ -172,10 +172,10 @@ namespace TokensBuilder.Templates
         {
             Type type = null;
             errors = new List<TokensError>();
-            TokenType token = expression.tokens.Peek();
+            TokenType token = expression.tokens.Pop();
             if (token == TokenType.VALUE)
             {
-                byte valtype = expression.byte_values.Peek();
+                byte valtype = expression.byte_values.Pop();
                 if (valtype == 0) type = typeof(object);
                 else if (valtype == 1) type = typeof(int);
                 else if (valtype == 2) type = typeof(string);
@@ -186,7 +186,7 @@ namespace TokensBuilder.Templates
                 else if (valtype == 7) type = typeof(short);
                 else if (valtype == 8) type = typeof(long);
                 else if (valtype == 9) type = typeof(double);
-                Context.LoadObject(expression.values.Peek());
+                LaterCalls.LoadObject(expression.values.Pop());
             }
             else if (token == TokenType.LITERAL) // is method
             {
@@ -200,14 +200,14 @@ namespace TokensBuilder.Templates
                     LocalBuilder local = ParseLocal(ref expression);
                     if (local != null)
                     {
-                        Context.LoadLocal(local);
+                        LaterCalls.LoadLocal(local);
                         type = local.LocalType;
                     }
                     else // is field
                     {
                         expression = backup;
                         FieldInfo value = ParseField(ref expression);
-                        Context.LoadField(value);
+                        LaterCalls.LoadField(value);
                         type = value.FieldType;
                     }
                 }
@@ -216,9 +216,9 @@ namespace TokensBuilder.Templates
                 if (expression.tokens[0] == TokenType.OPERATOR)
                 {
                     expression.tokens.RemoveAt(0);
-                    OperatorType op = expression.operators.Peek();
+                    OperatorType op = expression.operators.Pop();
                     if (type == ParseValue(ref expression))
-                        Context.LoadOperator(type, op);
+                        LaterCalls.LoadOperator(type, op);
                     else
                         errors.Add(new InvalidTypeError(
                             line, $"Type {type} before operator {op} not equals type of value after operator"));

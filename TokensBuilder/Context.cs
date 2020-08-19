@@ -24,7 +24,6 @@ namespace TokensBuilder
             set => _classBuilder = value;
         }
         public static FunctionBuilder functionBuilder => classBuilder.methodBuilder;
-        private static FunctionBuilder backup = new FunctionBuilder();
         public static bool isFuncBody => functionBuilder != null && !functionBuilder.IsEmpty;
         private static Generator gen => TokensBuilder.gen;
         private static ILGenerator ilg => classBuilder.methodBuilder.generator;
@@ -51,13 +50,13 @@ namespace TokensBuilder
 
         public static CustomAttributeBuilder FindAttribute(IEnumerable<string> namespaces)
         {
-            string attributeName = gen.reader.string_values.Peek();
+            string attributeName = gen.reader.string_values.Pop();
             Type[] ctorTypes = Type.EmptyTypes;
             object[] args = new object[] { };
             if (gen.reader.tokens[0] == TokenType.STATEMENT)
             {
                 gen.reader.tokens.RemoveAt(0);
-                if (gen.reader.bool_values.Peek())
+                if (gen.reader.bool_values.Pop())
                 {
                     //pass
                 }
@@ -150,10 +149,10 @@ namespace TokensBuilder
 
         public static void CreateField()
         {
-            string typeName = gen.reader.string_values.Peek();
+            string typeName = gen.reader.string_values.Pop();
             gen.reader.tokens.RemoveAt(0); // remove name of type
-            VarType varType = gen.reader.var_types.Peek();
-            SecurityDegree security = gen.reader.securities.Peek();
+            VarType varType = gen.reader.var_types.Pop();
+            SecurityDegree security = gen.reader.securities.Pop();
             FieldAttributes fieldAttributes;
             if (security == SecurityDegree.PUBLIC) fieldAttributes = FieldAttributes.Public;
             else if (security == SecurityDegree.PRIVATE) fieldAttributes = FieldAttributes.Private;
@@ -164,18 +163,18 @@ namespace TokensBuilder
             else if (varType == VarType.STATIC) fieldAttributes |= FieldAttributes.Static;
 
             check_var:
-            string name = gen.reader.string_values.Peek();
+            string name = gen.reader.string_values.Pop();
             gen.reader.tokens.RemoveAt(0); // remove name
             classBuilder.DefineField(name, typeName, fieldAttributes);
 
-            TokenType curtoken = gen.reader.tokens.Peek();
+            TokenType curtoken = gen.reader.tokens.Pop();
             if (curtoken == TokenType.OPERATOR)
             {
-                OperatorType optype = gen.reader.operators.Peek();
+                OperatorType optype = gen.reader.operators.Pop();
                 if (optype == OperatorType.ASSIGN)
                 {
                     gen.parameterTypes.Push(new List<Type>()); // create new parameter types for value
-                    curtoken = gen.reader.tokens.Peek();
+                    curtoken = gen.reader.tokens.Pop();
                     do
                     {
                         gen.ParseToken(curtoken);
@@ -186,7 +185,7 @@ namespace TokensBuilder
                     functionBuilder.generator.Emit(OpCodes.Stloc, classBuilder.fieldBuilder); // save getted value
                     if (curtoken == TokenType.SEPARATOR)
                     {
-                        if (gen.reader.bool_values.Peek())
+                        if (gen.reader.bool_values.Pop())
                             goto check_var;
                         else
                             TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
@@ -205,7 +204,7 @@ namespace TokensBuilder
             }
             else if (curtoken == TokenType.SEPARATOR)
             {
-                if (!gen.reader.bool_values.Peek())
+                if (!gen.reader.bool_values.Pop())
                     goto check_var;
                 else
                     TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
@@ -218,13 +217,13 @@ namespace TokensBuilder
 
         public static void CreateLocal()
         {
-            string typeName = gen.reader.string_values.Peek();
+            string typeName = gen.reader.string_values.Pop();
             gen.reader.tokens.RemoveAt(0); // remove name of type
-            gen.reader.securities.Peek();
-            VarType varType = gen.reader.var_types.Peek();
+            gen.reader.securities.Pop();
+            VarType varType = gen.reader.var_types.Pop();
 
             check_var:
-            string name = gen.reader.string_values.Peek();
+            string name = gen.reader.string_values.Pop();
             gen.reader.tokens.RemoveAt(0); // remove name
             LocalBuilder local = functionBuilder.DeclareLocal(typeName);
             if (varType == VarType.CONST || varType == VarType.FINAL)
@@ -233,14 +232,14 @@ namespace TokensBuilder
                 functionBuilder.localVariables.Add(name, local);
             else
                 TokensBuilder.Error(new InvalidVarTypeError(gen.line, $"Type of variable {varType} is not valid for local variables"));
-            TokenType curtoken = gen.reader.tokens.Peek();
+            TokenType curtoken = gen.reader.tokens.Pop();
             if (curtoken == TokenType.OPERATOR)
             {
-                OperatorType optype = gen.reader.operators.Peek();
+                OperatorType optype = gen.reader.operators.Pop();
                 if (optype == OperatorType.ASSIGN)
                 {
                     gen.parameterTypes.Push(new List<Type>()); // create new parameter types for value
-                    curtoken = gen.reader.tokens.Peek();
+                    curtoken = gen.reader.tokens.Pop();
                     do
                     {
                         gen.ParseToken(curtoken);
@@ -251,7 +250,7 @@ namespace TokensBuilder
                     functionBuilder.generator.Emit(OpCodes.Stloc, local); // save getted value
                     if (curtoken == TokenType.SEPARATOR)
                     {
-                        if (gen.reader.bool_values.Peek())
+                        if (gen.reader.bool_values.Pop())
                             goto check_var;
                         else
                             TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
@@ -270,7 +269,7 @@ namespace TokensBuilder
             }
             else if (curtoken == TokenType.SEPARATOR)
             {
-                if (!gen.reader.bool_values.Peek())
+                if (!gen.reader.bool_values.Pop())
                     goto check_var;
                 else
                     TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
@@ -283,9 +282,9 @@ namespace TokensBuilder
 
         public static FuncType CreateMethod()
         {
-            string name = gen.reader.string_values.Peek(), typeName = gen.reader.string_values.Peek();
-            FuncType funcType = gen.reader.function_types.Peek();
-            SecurityDegree security = gen.reader.securities.Peek();
+            string name = gen.reader.string_values.Pop(), typeName = gen.reader.string_values.Pop();
+            FuncType funcType = gen.reader.function_types.Pop();
+            SecurityDegree security = gen.reader.securities.Pop();
             classBuilder.CreateMethod(name, typeName, funcType, security);
             return funcType;
         }
@@ -317,10 +316,6 @@ namespace TokensBuilder
                 ilg.Emit(OpCodes.Ldc_I4, c);
             else if (value is string str)
                 ilg.Emit(OpCodes.Ldstr, str);
-            else if (value is FieldInfo fld)
-                LoadField(fld);
-            else if (value is LocalBuilder lcl)
-                LoadLocal(lcl);
         }
 
         public static void CallMethod(MethodInfo method, bool dontPop = true)
@@ -472,16 +467,6 @@ namespace TokensBuilder
             }
         }
         #endregion
-
-        public static void CreateBackup()
-        {
-            backup.Assign(functionBuilder);
-        }
-
-        public static void ReturnBackup()
-        {
-            classBuilder.methodBuilder.Assign(backup);
-        }
 
         public static void Finish()
         {

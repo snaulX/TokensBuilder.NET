@@ -19,15 +19,15 @@ namespace TokensBuilder
 
         public override void EndLoop()
         {
-            if (g.reader.tokens.Peek() == TokenType.LOOP && g.reader.loops.Peek() == LoopType.WHILE)
+            if (g.reader.tokens.Pop() == TokenType.LOOP && g.reader.loops.Pop() == LoopType.WHILE)
             {
-                if (g.reader.tokens.Peek() == TokenType.STATEMENT && g.reader.bool_values.Peek())
+                if (g.reader.tokens.Pop() == TokenType.STATEMENT && g.reader.bool_values.Pop())
                 {
                     g.needEndStatement++;
                     g.loopStatement = g.needEndStatement;
-                    while (!g.ParseLoopStatement(g.reader.tokens.Peek())) { }
+                    while (!g.ParseLoopStatement(g.reader.tokens.Pop())) { }
                     g.loopStatement = 0;
-                    if (g.reader.tokens.Peek() != TokenType.EXPRESSION_END)
+                    if (g.reader.tokens.Pop() != TokenType.EXPRESSION_END)
                         g.errors.Add(new InvalidTokenError(g.line, "After do-while loop must stay end of expression"));
 
                     Generator generator = new Generator();
@@ -39,14 +39,14 @@ namespace TokensBuilder
                         if (generator.tryDirective)
                         {
                             int errlen = generator.errors.Count;
-                            generator.ParseToken(generator.reader.tokens.Peek());
+                            generator.ParseToken(generator.reader.tokens.Pop());
                             if (generator.errors.Count > errlen)
                                 generator.errors.RemoveRange(errlen, generator.errors.Count);
                             //tryDirective = false;
                         }
                         else
                         {
-                            TokenType tt = generator.reader.tokens.Peek();
+                            TokenType tt = generator.reader.tokens.Pop();
                             generator.ParseToken(tt);
                             generator.prev = tt;
                         }

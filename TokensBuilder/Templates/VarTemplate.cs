@@ -19,21 +19,21 @@ namespace TokensBuilder.Templates
             varnames = new List<string>();
             type = VarType.DEFAULT;
             security = SecurityDegree.PUBLIC;
-            if (expression_end && expression.tokens.Peek() == TokenType.VAR)
+            if (expression_end && expression.tokens.Pop() == TokenType.VAR)
             {
-                type = expression.var_types.Peek();
-                security = expression.securities.Peek();
-                if (expression.tokens.Peek() == TokenType.LITERAL)
+                type = expression.var_types.Pop();
+                security = expression.securities.Pop();
+                if (expression.tokens.Pop() == TokenType.LITERAL)
                 {
-                    typename = expression.string_values.Peek();
+                    typename = expression.string_values.Pop();
                     parse_var:
-                    if (expression.tokens.Peek() == TokenType.LITERAL)
+                    if (expression.tokens.Pop() == TokenType.LITERAL)
                     {
-                        varnames.Add(expression.string_values.Peek());
+                        varnames.Add(expression.string_values.Pop());
                         TokenType token;
                         try
                         {
-                            token = expression.tokens.Peek();
+                            token = expression.tokens.Pop();
                         }
                         catch (ArgumentOutOfRangeException) // if tokens is ended
                         {
@@ -41,7 +41,7 @@ namespace TokensBuilder.Templates
                         }
                         if (token == TokenType.SEPARATOR)
                         {
-                            if (expression.bool_values.Peek())
+                            if (expression.bool_values.Pop())
                                 return false;
                             else
                                 goto parse_var;

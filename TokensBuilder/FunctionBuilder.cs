@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
 using TokensBuilder.Errors;
-using GrEmit;
 
 namespace TokensBuilder
 {
@@ -16,7 +15,6 @@ namespace TokensBuilder
         public FuncType type;
         public Dictionary<string, LocalBuilder> localVariables, localFinals;
         public ParameterAttributes parameterAttributes;
-        public GroboIL ilgen;
         public ILGenerator generator => constructorBuilder == null ? methodBuilder.GetILGenerator() : constructorBuilder.GetILGenerator();
         private Generator gen => TokensBuilder.gen;
 
@@ -52,13 +50,11 @@ namespace TokensBuilder
         public FunctionBuilder(MethodBuilder methodBuilder) : this()
         {
             this.methodBuilder = methodBuilder;
-            ilgen = new GroboIL(methodBuilder);
         }
 
         public FunctionBuilder(ConstructorBuilder constructorBuilder) : this()
         {
             this.constructorBuilder = constructorBuilder;
-            ilgen = new GroboIL(constructorBuilder);
         }
 
         public FunctionBuilder()
@@ -69,7 +65,6 @@ namespace TokensBuilder
             constructorBuilder = null;
             type = FuncType.DEFAULT;
             parameterAttributes = ParameterAttributes.None;
-            ilgen = null;
         }
 
         public void SetAttribute(CustomAttributeBuilder attribute)
@@ -78,17 +73,6 @@ namespace TokensBuilder
                 methodBuilder.SetCustomAttribute(attribute);
             else
                 constructorBuilder.SetCustomAttribute(attribute);
-        }
-
-        public void Assign(FunctionBuilder fb)
-        {
-            methodBuilder = fb.methodBuilder;
-            constructorBuilder = fb.constructorBuilder;
-            parameterAttributes = fb.parameterAttributes;
-            type = fb.type;
-            localFinals = fb.localFinals;
-            localVariables = fb.localVariables;
-            ilgen = fb.ilgen;
         }
 
         public void End()
