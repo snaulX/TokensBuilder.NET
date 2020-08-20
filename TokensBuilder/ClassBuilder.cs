@@ -46,64 +46,6 @@ namespace TokensBuilder
                 typeBuilder = Context.moduleBuilder.DefineType(nameSpace + "." + name, typeAttributes);
         }
 
-        public void CreateDefaultConstructorArgs(IEnumerable<TokenType> tokens)
-        {
-            if (!tokens.IsEmpty())
-            {
-                bool needVar = false;
-                foreach (TokenType token in tokens)
-                {
-                    if (needVar)
-                    {
-                        if (token != TokenType.VAR)
-                            TokensBuilder.Error(new InvalidTokenError(gen.line, token));
-                    }
-                    switch (token)
-                    {
-                        case TokenType.LITERAL:
-                            break;
-                        case TokenType.VAR:
-                            needVar = false;
-                            Context.CreateField();
-                            break;
-                        case TokenType.ACTUAL:
-                            bool _actual = gen.reader.bool_values.Pop();
-                            if (!actual.HasValue)
-                                TokensBuilder.Error(new TokensError(gen.line,
-                                    "Cannot be use " + (_actual ? "actual" : "expect") + " fields in default class"));
-                            else
-                            {
-                                if (!actual.GetValueOrDefault() && _actual)
-                                    TokensBuilder.Error(new PlatformImplementationError(gen.line,
-                                        "Cannot be actual members in expect class"));
-                                else if (actual.GetValueOrDefault() && !_actual)
-                                    TokensBuilder.Error(new PlatformImplementationError(gen.line,
-                                        "Cannot be expect members in actual class"));
-                                else
-                                    needVar = true;
-                            }
-                            break;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Make operations before end field and end field
-        /// </summary>
-        /// <returns>Have field?</returns>
-        public bool TryEndField()
-        {
-            if (fieldBuilder != null)
-            {
-                if (fieldBuilder.IsLiteral)
-                    constants.Add(fieldBuilder.Name, fieldBuilder);
-                fieldBuilder = null;
-                return true;
-            }
-            else return false;
-        }
-
         internal FunctionBuilder CreateMethod(string name, string typeName = "", FuncType type = FuncType.DEFAULT,
             SecurityDegree security = SecurityDegree.PUBLIC)
         {

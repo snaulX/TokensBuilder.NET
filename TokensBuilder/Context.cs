@@ -145,148 +145,6 @@ namespace TokensBuilder
                 }
             }
         }
-
-        public static void CreateField()
-        {
-            string typeName = gen.reader.string_values.Pop();
-            gen.reader.tokens.RemoveAt(0); // remove name of type
-            VarType varType = gen.reader.var_types.Pop();
-            SecurityDegree security = gen.reader.securities.Pop();
-            FieldAttributes fieldAttributes;
-            if (security == SecurityDegree.PUBLIC) fieldAttributes = FieldAttributes.Public;
-            else if (security == SecurityDegree.PRIVATE) fieldAttributes = FieldAttributes.Private;
-            else if (security == SecurityDegree.INTERNAL) fieldAttributes = FieldAttributes.Assembly;
-            else fieldAttributes = FieldAttributes.Family;
-            if (varType == VarType.CONST) fieldAttributes |= FieldAttributes.Literal | FieldAttributes.HasDefault | FieldAttributes.Static;
-            else if (varType == VarType.FINAL) fieldAttributes |= FieldAttributes.InitOnly;
-            else if (varType == VarType.STATIC) fieldAttributes |= FieldAttributes.Static;
-
-            check_var:
-            string name = gen.reader.string_values.Pop();
-            gen.reader.tokens.RemoveAt(0); // remove name
-            classBuilder.DefineField(name, typeName, fieldAttributes);
-
-            TokenType curtoken = gen.reader.tokens.Pop();
-            if (curtoken == TokenType.OPERATOR)
-            {
-                OperatorType optype = gen.reader.operators.Pop();
-                if (optype == OperatorType.ASSIGN)
-                {
-                    gen.parameterTypes.Push(new List<Type>()); // create new parameter types for value
-                    curtoken = gen.reader.tokens.Pop();
-                    do
-                    {
-                        gen.ParseToken(curtoken);
-                    }
-                    while (curtoken != TokenType.SEPARATOR || curtoken != TokenType.EXPRESSION_END);
-                    if (gen.parameterTypes.Pop()[0] != GetTypeByName(typeName))
-                        TokensBuilder.Error(new TokensError(gen.line, "Type of value not equals type of variable"));
-                    functionBuilder.generator.Emit(OpCodes.Stloc, classBuilder.fieldBuilder); // save getted value
-                    if (curtoken == TokenType.SEPARATOR)
-                    {
-                        if (gen.reader.bool_values.Pop())
-                            goto check_var;
-                        else
-                            TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
-                    }
-                    else // EXPRESSION_END
-                    {
-                        return;
-                    }
-                }
-                else
-                    TokensBuilder.Error(new InvalidOperatorError(gen.line, $"Operator {optype} cannot be after variable declaration"));
-            }
-            else if (curtoken == TokenType.EXPRESSION_END)
-            {
-                return;
-            }
-            else if (curtoken == TokenType.SEPARATOR)
-            {
-                if (!gen.reader.bool_values.Pop())
-                    goto check_var;
-                else
-                    TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
-            }
-            else
-            {
-                TokensBuilder.Error(new InvalidTokenError(gen.line, $"Invalid token {curtoken} after variable definition"));
-            }
-        }
-
-        public static void CreateLocal()
-        {
-            string typeName = gen.reader.string_values.Pop();
-            gen.reader.tokens.RemoveAt(0); // remove name of type
-            gen.reader.securities.Pop();
-            VarType varType = gen.reader.var_types.Pop();
-
-            check_var:
-            string name = gen.reader.string_values.Pop();
-            gen.reader.tokens.RemoveAt(0); // remove name
-            LocalBuilder local = functionBuilder.DeclareLocal(typeName);
-            if (varType == VarType.CONST || varType == VarType.FINAL)
-                functionBuilder.localFinals.Add(name, local);
-            else if (varType == VarType.DEFAULT)
-                functionBuilder.localVariables.Add(name, local);
-            else
-                TokensBuilder.Error(new InvalidVarTypeError(gen.line, $"Type of variable {varType} is not valid for local variables"));
-            TokenType curtoken = gen.reader.tokens.Pop();
-            if (curtoken == TokenType.OPERATOR)
-            {
-                OperatorType optype = gen.reader.operators.Pop();
-                if (optype == OperatorType.ASSIGN)
-                {
-                    gen.parameterTypes.Push(new List<Type>()); // create new parameter types for value
-                    curtoken = gen.reader.tokens.Pop();
-                    do
-                    {
-                        gen.ParseToken(curtoken);
-                    }
-                    while (curtoken != TokenType.SEPARATOR || curtoken != TokenType.EXPRESSION_END);
-                    if (gen.parameterTypes.Pop()[0] != GetTypeByName(typeName))
-                        TokensBuilder.Error(new TokensError(gen.line, "Type of value not equals type of variable"));
-                    functionBuilder.generator.Emit(OpCodes.Stloc, local); // save getted value
-                    if (curtoken == TokenType.SEPARATOR)
-                    {
-                        if (gen.reader.bool_values.Pop())
-                            goto check_var;
-                        else
-                            TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
-                    }
-                    else // EXPRESSION_END
-                    {
-                        return;
-                    }
-                }
-                else
-                    TokensBuilder.Error(new InvalidOperatorError(gen.line, $"Operator {optype} cannot be after variable declaration"));
-            }
-            else if (curtoken == TokenType.EXPRESSION_END)
-            {
-                return;
-            }
-            else if (curtoken == TokenType.SEPARATOR)
-            {
-                if (!gen.reader.bool_values.Pop())
-                    goto check_var;
-                else
-                    TokensBuilder.Error(new InvalidTokenError(gen.line, "Literal separator cannot insert in variable declaration"));
-            }
-            else
-            {
-                TokensBuilder.Error(new InvalidTokenError(gen.line, $"Invalid token {curtoken} after variable definition"));
-            }
-        }
-
-        public static FuncType CreateMethod()
-        {
-            string name = gen.reader.string_values.Pop(), typeName = gen.reader.string_values.Pop();
-            FuncType funcType = gen.reader.function_types.Pop();
-            SecurityDegree security = gen.reader.securities.Pop();
-            classBuilder.CreateMethod(name, typeName, funcType, security);
-            return funcType;
-        }
         #endregion
 
         #region Methods for manipulations with ILGenerator
@@ -345,7 +203,8 @@ namespace TokensBuilder
         public static void SetField(FieldInfo field)
         {
             if (field != null)
-                ilg.Emit(OpCodes.Stfld, field);
+            {
+                if (field.IsStatic)
                     ilg.Emit(OpCodes.Stsfld, field);
                 else
                     ilg.Emit(OpCodes.Stfld, field);

@@ -74,11 +74,5 @@ namespace TokensBuilder
             else
                 constructorBuilder.SetCustomAttribute(attribute);
         }
-
-        public void End()
-        {
-            constructorBuilder = null;
-            methodBuilder = null;
-        }
     }
 }

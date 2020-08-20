@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using TokensAPI;
@@ -40,10 +39,18 @@ namespace TokensBuilder
             loadOpSk = 0, dontPopSk = 0, callMtdSk = 0, newObjSk = 0;
 
         #region Operations
-        public static void LoadObject(object value)
+        public static void LoadObject(object value, bool seek = false)
         {
-            orderCalls.Add(CallType.LoadObject);
-            loadObjects.Add(value);
+            if (seek)
+            {
+                orderCalls.Insert(orderSk, CallType.LoadObject);
+                loadObjects.Insert(loadObjSk, value);
+            }
+            else
+            {
+                orderCalls.Add(CallType.LoadObject);
+                loadObjects.Add(value);
+            }
         }
 
         public static void CallMethod(MethodInfo method, bool dontPop = true)
@@ -53,10 +60,18 @@ namespace TokensBuilder
             dontPops.Add(dontPop);
         }
 
-        public static void LoadField(FieldInfo field)
+        public static void LoadField(FieldInfo field, bool seek = false)
         {
-            orderCalls.Add(CallType.LoadField);
-            loadFields.Add(field);
+            if (seek)
+            {
+                orderCalls.Insert(orderSk, CallType.LoadField);
+                loadFields.Insert(loadFldSk, field);
+            }
+            else
+            {
+                orderCalls.Add(CallType.LoadField);
+                loadFields.Add(field);
+            }
         }
 
         public static void SetField(FieldInfo field)
@@ -85,17 +100,34 @@ namespace TokensBuilder
             setLocals.Add(local);
         }
 
-        public static void LoadOperator(Type callerType, OperatorType op)
+        public static void LoadOperator(Type callerType, OperatorType op, bool seek = false)
         {
-            orderCalls.Add(CallType.LoadOperator);
-            loadCallerTypesOperators.Add(callerType);
-            loadOperators.Add(op);
+            if (seek)
+            {
+                orderCalls.Insert(orderSk, CallType.LoadOperator);
+                loadCallerTypesOperators.Insert(loadCTOSk, callerType);
+                loadOperators.Insert(loadOpSk, op);
+            }
+            else
+            {
+                orderCalls.Add(CallType.LoadOperator);
+                loadCallerTypesOperators.Add(callerType);
+                loadOperators.Add(op);
+            }
         }
 
-        public static void NewObject(ConstructorInfo ctor)
+        public static void NewObject(ConstructorInfo ctor, bool seek = false)
         {
-            orderCalls.Add(CallType.NewObject);
-            newObjects.Add(ctor);
+            if (seek)
+            {
+                orderCalls.Insert(orderSk, CallType.NewObject);
+                newObjects.Insert(newObjSk, ctor);
+            }
+            else
+            {
+                orderCalls.Add(CallType.NewObject);
+                newObjects.Add(ctor);
+            }
         }
         #endregion
 
@@ -170,7 +202,20 @@ namespace TokensBuilder
         public static void Seek()
         {
             if (!orderCalls.IsEmpty()) orderSk = orderCalls.Count - 1;
+            else orderSk = 0;
             if (!loadLocals.IsEmpty()) loadLclSk = loadLocals.Count - 1;
+            else loadLclSk = 0;
+            if (!loadFields.IsEmpty()) loadFldSk = loadFields.Count - 1;
+            else loadFldSk = 0;
+            if (!newObjects.IsEmpty()) newObjSk = newObjects.Count - 1;
+            else newObjSk = 0;
+            if (!loadCallerTypesOperators.IsEmpty()) 
+                loadCTOSk = loadCallerTypesOperators.Count - 1;
+            else loadCTOSk = 0;
+            if (!loadOperators.IsEmpty()) loadOpSk = loadOperators.Count - 1;
+            else loadOpSk = 0;
+            if (!loadObjects.IsEmpty()) loadObjSk = loadObjects.Count - 1;
+            else loadObjSk = 0;
         }
     }
 }
