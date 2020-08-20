@@ -249,7 +249,6 @@ namespace TokensBuilder.Templates
                             token = expression.tokens.Pop();
                             if (token == TokenType.STATEMENT && !expression.bool_values.Pop()) // empty arguments
                             {
-                                ConstructorInfo ctor = type.GetConstructor(Type.EmptyTypes);
                                 LaterCalls.NewObject(type.GetConstructor(Type.EmptyTypes));
                                 return type;
                             }

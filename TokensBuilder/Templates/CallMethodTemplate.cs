@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using TokensAPI;
 using TokensBuilder.Errors;
@@ -20,6 +21,7 @@ namespace TokensBuilder.Templates
             if (!expression_end) 
                 return false;
 
+            LaterCalls.Seek();
             paramTypes = new List<Type>();
             methname = "";
             typename = "";
@@ -108,18 +110,38 @@ namespace TokensBuilder.Templates
             List<TokensError> errors = new List<TokensError>();
             try
             {
-                method = Context.GetTypeByName(typename).GetMethod(methname, paramTypes.ToArray());
-                if (method == null)
-                    errors.Add(new InvalidMethodError(line, $"Method with name {typename + methname} not found"));
+                Type callerType = Context.GetTypeByName(typename);
+                if (callerType == null)
+                {
+                    LocalBuilder local = Context.functionBuilder.GetLocal(typename);
+                    if (local == null)
+                        errors.Add(
+                            new TypeNotFoundError(
+                                line, $"Before calling method. Type or local with name {typename} not found"));
+                    else
+                    {
+                        LaterCalls.LoadLocal(local, true);
+                        method = local.LocalType.GetMethod(methname, paramTypes.ToArray());
+                        if (method == null)
+                            errors.Add(new InvalidMethodError(line, $"Method with name {typename + methname} not found"));
+                        else if (method.IsStatic)
+                            errors.Add(new InvalidMethodError(
+                                line, $"Local variable {typename} cannot call static method {methname}"));
+                        else
+                            LaterCalls.CallMethod(method, dontPop);
+                    }
+                }
                 else
                 {
-                    LaterCalls.CallMethod(method, dontPop);
+                    method = callerType.GetMethod(methname, paramTypes.ToArray());
+                    if (method == null)
+                        errors.Add(new InvalidMethodError(line, $"Method with name {typename + methname} not found"));
+                    else if (!method.IsStatic)
+                        errors.Add(new InvalidMethodError(
+                            line, $"Type {typename} cannot call not static method {methname}"));
+                    else
+                        LaterCalls.CallMethod(method, dontPop);
                 }
-            }
-            catch (NullReferenceException)
-            {
-                errors.Add(
-                    new TypeNotFoundError(line, $"Before calling method. Type with name {typename} not found"));
             }
             catch (AmbiguousMatchException)
             {

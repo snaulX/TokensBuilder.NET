@@ -332,7 +332,12 @@ namespace TokensBuilder
         public static void LoadField(FieldInfo field)
         {
             if (field != null)
-                ilg.Emit(OpCodes.Ldfld, field);
+            {
+                if (field.IsStatic)
+                    ilg.Emit(OpCodes.Ldsfld, field);
+                else
+                    ilg.Emit(OpCodes.Ldfld, field);
+            }
             else
                 TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect field given for load"));
         }
@@ -341,6 +346,10 @@ namespace TokensBuilder
         {
             if (field != null)
                 ilg.Emit(OpCodes.Stfld, field);
+                    ilg.Emit(OpCodes.Stsfld, field);
+                else
+                    ilg.Emit(OpCodes.Stfld, field);
+            }
             else
                 TokensBuilder.Error(new VarNotFoundError(gen.line, "Incorrect field given for assign"));
         }

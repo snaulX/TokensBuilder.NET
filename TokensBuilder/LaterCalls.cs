@@ -33,6 +33,12 @@ namespace TokensBuilder
         static List<MethodInfo> callMethods = new List<MethodInfo>();
         static List<ConstructorInfo> newObjects = new List<ConstructorInfo>();
 
+        /// <summary>
+        /// Seek
+        /// </summary>
+        static int orderSk = 0, loadFldSk = 0, setFldSk = 0, loadLclSk = 0, setLclSk = 0, loadObjSk = 0, loadCTOSk = 0,
+            loadOpSk = 0, dontPopSk = 0, callMtdSk = 0, newObjSk = 0;
+
         #region Operations
         public static void LoadObject(object value)
         {
@@ -59,10 +65,18 @@ namespace TokensBuilder
             setFields.Add(field);
         }
 
-        public static void LoadLocal(LocalBuilder local)
+        public static void LoadLocal(LocalBuilder local, bool seek = false)
         {
-            orderCalls.Add(CallType.LoadLocal);
-            loadLocals.Add(local);
+            if (seek)
+            {
+                orderCalls.Insert(orderSk, CallType.LoadLocal);
+                loadLocals.Insert(loadLclSk, local);
+            }
+            else
+            {
+                orderCalls.Add(CallType.LoadLocal);
+                loadLocals.Add(local);
+            }
         }
 
         public static void SetLocal(LocalBuilder local)
@@ -151,6 +165,12 @@ namespace TokensBuilder
                     newObjects.RemoveLast();
                     break;
             }
+        }
+
+        public static void Seek()
+        {
+            if (!orderCalls.IsEmpty()) orderSk = orderCalls.Count - 1;
+            if (!loadLocals.IsEmpty()) loadLclSk = loadLocals.Count - 1;
         }
     }
 }
