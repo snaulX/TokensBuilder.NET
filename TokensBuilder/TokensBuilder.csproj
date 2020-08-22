@@ -44,15 +44,14 @@
     <Reference Include="TokensAPI">
       <HintPath>..\..\..\..\snaulX\Mino\TokensAPI\CSharp\TokensAPI\TokensAPI\bin\Debug\netstandard2.0\TokensAPI.dll</HintPath>
     </Reference>
-    <Reference Include="TokensStandart">
-      <HintPath>..\..\..\..\snaulX\Mino\TokensStandart.NET\TokensStandart\bin\Debug\netstandard2.0\TokensStandart.dll</HintPath>
+    <Reference Include="TokensStandard">
+      <HintPath>..\..\..\..\snaulX\Mino\TokensStandard.NET\TokensStandard\bin\Debug\netstandard2.0\TokensStandard.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClassBuilder.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Context.cs" />
-    <Compile Include="EntrypointAttribute.cs" />
     <Compile Include="Errors\DirectiveError.cs" />
     <Compile Include="Errors\IncludeError.cs" />
     <Compile Include="Errors\InvalidHeaderError.cs" />
@@ -77,6 +76,7 @@
     <Compile Include="Templates\AssignTemplate.cs" />
     <Compile Include="Templates\BreakpointTemplate.cs" />
     <Compile Include="Templates\CallMethodTemplate.cs" />
+    <Compile Include="Templates\IfTemplate.cs" />
     <Compile Include="Templates\IncludeTemplate.cs" />
     <Compile Include="Templates\LibTemplate.cs" />
     <Compile Include="Templates\NamespaceTemplate.cs" />

@@ -4,7 +4,7 @@ using System.Reflection.Emit;
 using System.Reflection;
 using TokensAPI;
 using TokensBuilder.Errors;
-using TokensStandart;
+using TokensStandard;
 using System.Linq;
 
 namespace TokensBuilder
@@ -87,12 +87,15 @@ namespace TokensBuilder
 
         public static Type GetInterfaceByName(string name, IEnumerable<string> namespaces)
         {
-            Type iface = null;
+            Type iface;
             foreach (string nameSpace in namespaces)
             {
-                iface = Assembly.GetExecutingAssembly().GetType(nameSpace + name);
-                if (!iface.IsInterface) iface = null;
-                if (iface != null) return iface;
+                iface = Type.GetType(nameSpace + name);
+                if (iface != null)
+                {
+                    if (!iface.IsInterface) iface = null;
+                    else return iface;
+                }
             }
             return null;
         }
@@ -177,7 +180,10 @@ namespace TokensBuilder
 
         public static void CallMethod(MethodInfo method, bool dontPop = true)
         {
-            ilg.Emit(OpCodes.Call, method);
+            if (method.IsVirtual)
+                ilg.Emit(OpCodes.Callvirt, method);
+            else 
+                ilg.Emit(OpCodes.Call, method);
             if (!dontPop)
             {
                 if (method.ReturnType == typeof(void))

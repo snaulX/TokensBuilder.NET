@@ -11,6 +11,7 @@ namespace TokensBuilder.Templates
     public static class PartTemplate
     {
         static uint line => TokensBuilder.gen.line;
+        static byte lvlStatement = 0;
         public static List<TokensError> errors = new List<TokensError>();
 
         public static FieldInfo ParseField(ref TokensReader expression)
@@ -178,10 +179,40 @@ namespace TokensBuilder.Templates
             return null;
         }
 
+        public static void ParseStatement(ref TokensReader expression)
+        {
+            TokenType token = expression.tokens.Pop();
+            if (token == TokenType.STATEMENT)
+            {
+                if (expression.bool_values.Pop())
+                {
+                    ParseSmallStatement(ref expression);
+                }
+                else
+                {
+                    errors.Add(new InvalidTokenError(line, $"There are wrong 'closing statement' token"));
+                }
+            }
+            else
+            {
+                expression.tokens.Insert(0, token);
+                errors.Add(new InvalidTokenError(line, $"Statement cannot start with token {token}"));
+            }
+        }
+
+        public static void ParseSmallStatement(ref TokensReader expression)
+        {
+            int thisStatement = lvlStatement;
+            lvlStatement++;
+            while (thisStatement < lvlStatement)
+            {
+                ParseValue(ref expression);
+            }
+        }
+
         public static Type ParseValue(ref TokensReader expression)
         {
             Type type = null;
-            errors = new List<TokensError>();
             TokenType token = expression.tokens.Pop();
             if (token == TokenType.VALUE)
             {
@@ -233,7 +264,6 @@ namespace TokensBuilder.Templates
                         errors.Add(new InvalidTypeError(
                             line, $"Type {type} before operator {op} not equals type of value after operator"));
                 }
-                TokensBuilder.gen.errors.AddRange(errors);
             }
             else if (token == TokenType.NEW)
             {
@@ -291,6 +321,22 @@ namespace TokensBuilder.Templates
                             line, $"After constructor name must stay open statement (not {token})"));
                 }
             }
+            else if (token == TokenType.STATEMENT)
+            {
+                if (expression.bool_values.Pop())
+                {
+                    ParseSmallStatement(ref expression);
+                }
+                else
+                {
+                    if (lvlStatement == 0)
+                        errors.Add(new InvalidTokenError(line, $"There are wrong 'closing statement' token"));
+                    else
+                        lvlStatement--;
+                }
+            }
+            TokensBuilder.gen.errors.AddRange(errors);
+            errors.Clear();
             return type;
         }
     }
