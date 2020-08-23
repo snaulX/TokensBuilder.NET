@@ -184,35 +184,38 @@ namespace TokensBuilder
 
         public static void RemoveLast()
         {
-            switch (orderCalls.RemoveLast())
-            {
-                case CallType.LoadObject:
-                    loadObjects.RemoveLast();
-                    break;
-                case CallType.CallMethod:
-                    callMethods.RemoveLast();
-                    dontPops.RemoveLast();
-                    break;
-                case CallType.LoadField:
-                    loadFields.RemoveLast();
-                    break;
-                case CallType.SetField:
-                    setFields.RemoveLast();
-                    break;
-                case CallType.LoadLocal:
-                    loadLocals.RemoveLast();
-                    break;
-                case CallType.SetLocal:
-                    setLocals.RemoveLast();
-                    break;
-                case CallType.LoadOperator:
-                    loadOperators.RemoveLast();
-                    loadCallerTypesOperators.RemoveLast();
-                    break;
-                case CallType.NewObject:
-                    newObjects.RemoveLast();
-                    break;
-            }
+            //if (!orderCalls.IsEmpty())
+            //{
+                switch (orderCalls.RemoveLast())
+                {
+                    case CallType.LoadObject:
+                        loadObjects.RemoveLast();
+                        break;
+                    case CallType.CallMethod:
+                        callMethods.RemoveLast();
+                        dontPops.RemoveLast();
+                        break;
+                    case CallType.LoadField:
+                        loadFields.RemoveLast();
+                        break;
+                    case CallType.SetField:
+                        setFields.RemoveLast();
+                        break;
+                    case CallType.LoadLocal:
+                        loadLocals.RemoveLast();
+                        break;
+                    case CallType.SetLocal:
+                        setLocals.RemoveLast();
+                        break;
+                    case CallType.LoadOperator:
+                        loadOperators.RemoveLast();
+                        loadCallerTypesOperators.RemoveLast();
+                        break;
+                    case CallType.NewObject:
+                        newObjects.RemoveLast();
+                        break;
+                }
+            //}
         }
 
         public static void Seek()
