@@ -74,10 +74,18 @@ namespace TokensBuilder
             }
         }
 
-        public static void SetField(FieldInfo field)
+        public static void SetField(FieldInfo field, bool seek = false)
         {
-            orderCalls.Add(CallType.SetField);
-            setFields.Add(field);
+            if (seek)
+            {
+                orderCalls.Insert(0, CallType.SetField);
+                setFields.Insert(0, field);
+            }
+            else 
+            { 
+                orderCalls.Add(CallType.SetField);
+                setFields.Add(field);
+            }
         }
 
         public static void LoadLocal(LocalBuilder local, bool seek = false)
@@ -94,10 +102,18 @@ namespace TokensBuilder
             }
         }
 
-        public static void SetLocal(LocalBuilder local)
+        public static void SetLocal(LocalBuilder local, bool seek = false)
         {
-            orderCalls.Add(CallType.SetLocal);
-            setLocals.Add(local);
+            if (seek)
+            {
+                orderCalls.Insert(orderSk, CallType.SetLocal);
+                setLocals.Insert(setLclSk, local);
+            }
+            else
+            {
+                orderCalls.Add(CallType.SetLocal);
+                setLocals.Add(local);
+            }
         }
 
         public static void LoadOperator(Type callerType, OperatorType op, bool seek = false)
@@ -216,6 +232,10 @@ namespace TokensBuilder
             else loadOpSk = 0;
             if (!loadObjects.IsEmpty()) loadObjSk = loadObjects.Count - 1;
             else loadObjSk = 0;
+            if (!setLocals.IsEmpty()) setLclSk = setLocals.Count - 1;
+            else setLclSk = 0;
+            if (!setFields.IsEmpty()) setFldSk = setFields.Count - 1;
+            else setFldSk = 0;
         }
     }
 }

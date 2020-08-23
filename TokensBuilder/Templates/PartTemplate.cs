@@ -179,14 +179,14 @@ namespace TokensBuilder.Templates
             return null;
         }
 
-        public static void ParseStatement(ref TokensReader expression)
+        public static Type ParseStatement(ref TokensReader expression)
         {
             TokenType token = expression.tokens.Pop();
             if (token == TokenType.STATEMENT)
             {
                 if (expression.bool_values.Pop())
                 {
-                    ParseSmallStatement(ref expression);
+                    return ParseSmallStatement(ref expression);
                 }
                 else
                 {
@@ -198,16 +198,25 @@ namespace TokensBuilder.Templates
                 expression.tokens.Insert(0, token);
                 errors.Add(new InvalidTokenError(line, $"Statement cannot start with token {token}"));
             }
+            return null;
         }
 
-        public static void ParseSmallStatement(ref TokensReader expression)
+        public static Type ParseSmallStatement(ref TokensReader expression)
         {
             int thisStatement = lvlStatement;
             lvlStatement++;
+            List<Type> valuetypes = new List<Type>();
             while (thisStatement < lvlStatement)
             {
-                ParseValue(ref expression);
+                valuetypes.Add(ParseValue(ref expression));
             }
+            valuetypes.RemoveLast(); // remove type which was getted of close statement
+            if (valuetypes.IsEmpty())
+                return typeof(void);
+            else if (valuetypes.Count == 1)
+                return valuetypes[0];
+            else
+                return valuetypes[valuetypes.Count / 2];
         }
 
         public static Type ParseValue(ref TokensReader expression)
@@ -254,16 +263,6 @@ namespace TokensBuilder.Templates
                 }
                 else
                     type = method.ReturnType;
-                if (expression.tokens[0] == TokenType.OPERATOR)
-                {
-                    expression.tokens.RemoveAt(0);
-                    OperatorType op = expression.operators.Pop();
-                    if (type == ParseValue(ref expression))
-                        LaterCalls.LoadOperator(type, op);
-                    else
-                        errors.Add(new InvalidTypeError(
-                            line, $"Type {type} before operator {op} not equals type of value after operator"));
-                }
             }
             else if (token == TokenType.NEW)
             {
@@ -325,7 +324,7 @@ namespace TokensBuilder.Templates
             {
                 if (expression.bool_values.Pop())
                 {
-                    ParseSmallStatement(ref expression);
+                    type = ParseSmallStatement(ref expression);
                 }
                 else
                 {
@@ -333,6 +332,45 @@ namespace TokensBuilder.Templates
                         errors.Add(new InvalidTokenError(line, $"There are wrong 'closing statement' token"));
                     else
                         lvlStatement--;
+                }
+            }
+            if (!expression.tokens.IsEmpty() && expression.tokens[0] == TokenType.OPERATOR)
+            {
+                expression.tokens.RemoveAt(0);
+                OperatorType op = expression.operators.Pop();
+                if (type != null)
+                {
+                    if (type == ParseValue(ref expression))
+                        LaterCalls.LoadOperator(type, op);
+                    else
+                        errors.Add(new InvalidTypeError(
+                            line, $"Type {type} before operator {op} not equals type of value after operator"));
+                }
+                switch (op)
+                {
+                    case OperatorType.EQ:
+                    case OperatorType.NOTEQ:
+                    case OperatorType.NOT:
+                    case OperatorType.AND:
+                    case OperatorType.OR:
+                    case OperatorType.GT:
+                    case OperatorType.LT:
+                    case OperatorType.GORE:
+                    case OperatorType.LORE:
+                    case OperatorType.IN:
+                        type = typeof(bool);
+                        break;
+                    case OperatorType.GTQ:
+                        break;
+                    case OperatorType.LTQ:
+                        break;
+                    case OperatorType.CONVERTTO:
+                        break;
+                    case OperatorType.RANGE:
+                        break;
+                    case OperatorType.POW:
+                        type = typeof(float);
+                        break;
                 }
             }
             TokensBuilder.gen.errors.AddRange(errors);

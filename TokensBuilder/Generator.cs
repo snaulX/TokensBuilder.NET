@@ -274,7 +274,7 @@ namespace TokensBuilder
                     {
                         if (template.Parse(expression, exprend))
                         {
-                            template.Run(expression);
+                            errors.AddRange(template.Run(expression));
                             return;
                         }
                         else
