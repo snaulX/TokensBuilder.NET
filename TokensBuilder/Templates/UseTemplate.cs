@@ -5,15 +5,22 @@ namespace TokensBuilder.Templates
 {
     class UseTemplate : TokensTemplate
     {
+        public string ns = "";
+
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            return expression_end && expression.tokens[0] == TokenType.USING_NAMESPACE
-                && expression.tokens.Count == 1;
+            if (expression_end && expression.tokens[0] == TokenType.USING_NAMESPACE
+                && expression.tokens.Count == 1)
+            {
+                ns = expression.string_values.Pop();
+                return true;
+            }
+            else return false;
         }
 
-        public List<TokensError> Run(TokensReader expression)
+        public List<TokensError> Run()
         {
-            TokensBuilder.gen.usingNamespaces.Add(expression.string_values.Pop());
+            TokensBuilder.gen.usingNamespaces.Add(ns);
             return new List<TokensError>();
         }
     }

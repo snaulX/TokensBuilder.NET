@@ -13,14 +13,19 @@ namespace TokensBuilder.Templates
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            return expression_end && expression.tokens[0] == TokenType.INCLUDE
-                && expression.tokens.Count == 1;
+            if (expression_end && expression.tokens[0] == TokenType.INCLUDE
+                && expression.tokens.Count == 1)
+            {
+                libPath = expression.string_values.Pop();
+                return true;
+            }
+            else
+                return false;
         }
 
-        public List<TokensError> Run(TokensReader expression)
+        public List<TokensError> Run()
         {
             List<TokensError> errors = new List<TokensError>();
-            libPath = expression.string_values.Pop();
             uint line = TokensBuilder.gen.line;
             try
             {

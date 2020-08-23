@@ -17,8 +17,7 @@ namespace TokensBuilder
         /// <summary>
         /// Run expression by this template
         /// </summary>
-        /// <param name="expression">Expression for run</param>
         /// <returns>List of errors when was throwed in running</returns>
-        List<TokensError> Run(TokensReader expression);
+        List<TokensError> Run();
     }
 }

@@ -86,7 +86,7 @@ namespace TokensBuilder.Templates
                             callMethod.paramTypes = paramTypes;
                             callMethod.typename = typename;
                             callMethod.dontPop = true;
-                            callMethod.Run(expression);
+                            callMethod.Run();
                             return callMethod.method;
                         }
                         else
@@ -109,7 +109,7 @@ namespace TokensBuilder.Templates
                                         callMethod.paramTypes = paramTypes;
                                         callMethod.typename = typename;
                                         callMethod.dontPop = true;
-                                        callMethod.Run(expression);
+                                        callMethod.Run();
                                         return callMethod.method;
                                     }
                                     else

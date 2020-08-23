@@ -45,7 +45,7 @@ namespace TokensBuilder.Templates
                 return false;
         }
 
-        public List<TokensError> Run(TokensReader expression)
+        public List<TokensError> Run()
         {
             List<TokensError> errors = new List<TokensError>();
             if (local == null) // is field

@@ -12,7 +12,7 @@ namespace TokensBuilder.Templates
                 && expression.tokens.Count == 1;
         }
 
-        public List<TokensError> Run(TokensReader expression)
+        public List<TokensError> Run()
         {
             Context.functionBuilder.generator.Emit(OpCodes.Break);
             return new List<TokensError>();

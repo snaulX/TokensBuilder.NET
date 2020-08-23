@@ -24,6 +24,7 @@ namespace TokensBuilder
 
         #region Flags
         private int count = 0;
+        private bool exprend;
         private Dictionary<TokenType, TokensTemplate> strongTemplates = new Dictionary<TokenType, TokensTemplate>();
         private List<TokensTemplate> flexTemplates = new List<TokensTemplate>();
         #endregion
@@ -107,19 +108,114 @@ namespace TokensBuilder
             reader.EndWork();
             while (reader.tokens.Count > 0)
             {
-                ParseExpression();
+                TakeExpression();
+                ParseExpression(expression);
             }
             foreach (TokensError error in errors)
                 Console.Error.WriteLine(error);
         }
 
         /// <summary>
-        /// Get expression and parse it
+        /// Parse getted expression
         /// </summary>
-        public void ParseExpression()
+        public void ParseExpression(TokensReader expr)
+        {
+            bool error = false;
+            int trypos = -1;
+            try
+            {
+                if (expr.tokens.IsEmpty()) return;
+                reparse:
+                TokensTemplate template = strongTemplates[expr.tokens[0]];
+                try
+                {
+                    if (template.Parse(expr, exprend))
+                    {
+                        List<TokensError> errs = template.Run();
+                        if (!errs.IsEmpty())
+                        {
+                            errors.AddRange(errs);
+                            error = true;
+                        }
+                    }
+                    else
+                        error = true;
+                }
+                catch
+                {
+                    error = true;
+                }
+                if (error)
+                {
+                    if (!tryTokens.IsEmpty())
+                    {
+                        LaterCalls.RemoveLast();
+                        if (trypos < 0) trypos = tryPositions.Pop();
+                        expr.tokens.RemoveAt(trypos);
+                        if (count == 0) count = tryCounts.Pop();
+                        if (count > 0)
+                        {
+                            count--;
+                            expr.tokens.Insert(trypos, tryTokens.Pop());
+                            goto reparse;
+                        }
+                    }
+                    else
+                    {
+                        errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
+                    }
+                }
+            }
+            catch (KeyNotFoundException)
+            {
+                reparse:
+                foreach (TokensTemplate template in flexTemplates)
+                {
+                    TokensReader backup = new TokensReader();
+                    backup.Add(expr);
+                    try
+                    {
+                        if (template.Parse(expr, exprend))
+                        {
+                            errors.AddRange(template.Run());
+                            return;
+                        }
+                        else
+                            expr = backup;
+                    }
+                    catch { expr = backup; }
+                }
+                if (!tryTokens.IsEmpty())
+                {
+                    LaterCalls.RemoveLast();
+                    if (trypos < 0) trypos = tryPositions.Pop();
+                    expr.tokens.RemoveAt(trypos);
+                    if (count == 0) count = tryCounts.Pop();
+                    if (count > 0)
+                    {
+                        count--;
+                        expr.tokens.Insert(trypos, tryTokens.Pop());
+                        goto reparse;
+                    }
+                }
+                else
+                {
+                    errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expr.tokens)}"));
+                }
+            }
+            finally
+            {
+                if (isFuncBody) LaterCalls.Call();
+            }
+        }
+
+        /// <summary>
+        /// Get expression from code
+        /// </summary>
+        public void TakeExpression()
         {
             expression = new TokensReader();
-            bool exprend = true;
+            exprend = true;
             int pos = 0;
             while (pos < reader.tokens.Count)
             {
@@ -217,93 +313,6 @@ namespace TokensBuilder
                 }
             }
             reader.tokens.RemoveRange(0, pos);
-            bool error = false;
-            int trypos = -1;
-            try
-            {
-                if (expression.tokens.IsEmpty()) return;
-                reparse:
-                TokensTemplate template = strongTemplates[expression.tokens[0]];
-                try
-                {
-                    if (template.Parse(expression, exprend))
-                    {
-                        List<TokensError> errs = template.Run(expression);
-                        if (!errs.IsEmpty())
-                        {
-                            errors.AddRange(errs);
-                            error = true;
-                        }
-                    }
-                    else
-                        error = true;
-                }
-                catch
-                {
-                    error = true;
-                }
-                if (error)
-                {
-                    if (!tryTokens.IsEmpty())
-                    {
-                        LaterCalls.RemoveLast();
-                        if (trypos < 0) trypos = tryPositions.Pop();
-                        expression.tokens.RemoveAt(trypos);
-                        if (count == 0) count = tryCounts.Pop();
-                        if (count > 0)
-                        {
-                            count--;
-                            expression.tokens.Insert(trypos, tryTokens.Pop());
-                            goto reparse;
-                        }
-                    }
-                    else
-                    {
-                        errors.Add(new InvalidTokensTemplateError(line, $"Invalid template of token {expression.tokens[0]}"));
-                    }
-                }
-            }
-            catch (KeyNotFoundException)
-            {
-                reparse:
-                foreach (TokensTemplate template in flexTemplates)
-                {
-                    TokensReader backup = new TokensReader();
-                    backup.Add(expression);
-                    try
-                    {
-                        if (template.Parse(expression, exprend))
-                        {
-                            errors.AddRange(template.Run(expression));
-                            return;
-                        }
-                        else
-                            expression = backup;
-                    }
-                    catch { expression = backup; }
-                }
-                if (!tryTokens.IsEmpty())
-                {
-                    LaterCalls.RemoveLast();
-                    if (trypos < 0) trypos = tryPositions.Pop();
-                    expression.tokens.RemoveAt(trypos);
-                    if (count == 0) count = tryCounts.Pop();
-                    if (count > 0)
-                    {
-                        count--;
-                        expression.tokens.Insert(trypos, tryTokens.Pop());
-                        goto reparse;
-                    }
-                }
-                else
-                {
-                    errors.Add(new InvalidTokensTemplateError(line, $"Unknown tokens template {string.Join(" ", expression.tokens)}"));
-                }
-            }
-            finally
-            {
-                if (isFuncBody) LaterCalls.Call();
-            }
         }
 
         public int ParseDirective(int pos)

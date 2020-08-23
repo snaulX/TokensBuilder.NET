@@ -7,17 +7,22 @@ namespace TokensBuilder.Templates
     class LibTemplate : TokensTemplate
     {
         public TokensReader library = new TokensReader();
+        public string path = "";
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            return expression_end && expression.tokens[0] == TokenType.IMPORT_LIBRARY
-                && expression.tokens.Count == 1;
+            if (expression_end && expression.tokens[0] == TokenType.IMPORT_LIBRARY
+                && expression.tokens.Count == 1)
+            {
+                path = expression.string_values.Pop();
+                return true;
+            }
+            else return false;
         }
 
-        public List<TokensError> Run(TokensReader expression)
+        public List<TokensError> Run()
         {
             List<TokensError> errors = new List<TokensError>();
-            string path = expression.string_values.Pop();
             try
             {
                 if (path.StartsWith("<")) library.SetPath(path.Remove(path.Length - 2) + ".tokens");
