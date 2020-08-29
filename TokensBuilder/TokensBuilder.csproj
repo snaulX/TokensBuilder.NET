@@ -76,6 +76,7 @@
     <Compile Include="Templates\AssignTemplate.cs" />
     <Compile Include="Templates\BreakpointTemplate.cs" />
     <Compile Include="Templates\CallMethodTemplate.cs" />
+    <Compile Include="Templates\ElseTemplate.cs" />
     <Compile Include="Templates\IfTemplate.cs" />
     <Compile Include="Templates\IncludeTemplate.cs" />
     <Compile Include="Templates\LibTemplate.cs" />

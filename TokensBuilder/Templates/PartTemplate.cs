@@ -11,7 +11,7 @@ namespace TokensBuilder.Templates
     public static class PartTemplate
     {
         static uint line => TokensBuilder.gen.line;
-        static byte lvlStatement = 0;
+        public static byte lvlStatement = 0, lvlBlock = 0;
         public static List<TokensError> errors = new List<TokensError>();
 
         public static FieldInfo ParseField(ref TokensReader expression)
@@ -334,6 +334,10 @@ namespace TokensBuilder.Templates
                         lvlStatement--;
                 }
             }
+            else if (token == TokenType.OPERATOR)
+            {
+                OperatorType op = expression.operators.Pop();
+            }
             if (!expression.tokens.IsEmpty() && expression.tokens[0] == TokenType.OPERATOR)
             {
                 expression.tokens.RemoveAt(0);
@@ -359,12 +363,6 @@ namespace TokensBuilder.Templates
                     case OperatorType.LORE:
                     case OperatorType.IN:
                         type = typeof(bool);
-                        break;
-                    case OperatorType.GTQ:
-                        break;
-                    case OperatorType.LTQ:
-                        break;
-                    case OperatorType.CONVERTTO:
                         break;
                     case OperatorType.RANGE:
                         break;

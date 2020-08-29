@@ -15,7 +15,8 @@ namespace TokensBuilder
         LoadLocal,
         SetLocal,
         LoadOperator,
-        NewObject
+        NewObject,
+        BrEndIf
     }
 
     public static class LaterCalls
@@ -31,6 +32,8 @@ namespace TokensBuilder
         static List<bool> dontPops = new List<bool>();
         static List<MethodInfo> callMethods = new List<MethodInfo>();
         static List<ConstructorInfo> newObjects = new List<ConstructorInfo>();
+        public static Stack<Label> endIfLabels = new Stack<Label>();
+        public static bool brEndIf = false;
 
         /// <summary>
         /// Seek
@@ -145,6 +148,11 @@ namespace TokensBuilder
                 newObjects.Add(ctor);
             }
         }
+
+        public static void CreateEndIfLabel() =>
+            endIfLabels.Push(Context.functionBuilder.generator.DefineLabel());
+
+        public static void BrEndIf() => orderCalls.Add(CallType.BrEndIf);
         #endregion
 
         public static void Call()
@@ -177,6 +185,10 @@ namespace TokensBuilder
                     case CallType.NewObject:
                         Context.NewObject(newObjects.Pop());
                         break;
+                    case CallType.BrEndIf:
+                        if (brEndIf)
+                            Context.functionBuilder.generator.Emit(OpCodes.Br, endIfLabels.Peek());
+                        break;
                 }
             }
             orderCalls.Clear();
@@ -184,8 +196,8 @@ namespace TokensBuilder
 
         public static void RemoveLast()
         {
-            //if (!orderCalls.IsEmpty())
-            //{
+            if (!orderCalls.IsEmpty())
+            {
                 switch (orderCalls.RemoveLast())
                 {
                     case CallType.LoadObject:
@@ -215,7 +227,7 @@ namespace TokensBuilder
                         newObjects.RemoveLast();
                         break;
                 }
-            //}
+            }
         }
 
         public static void Seek()

@@ -34,6 +34,7 @@ namespace TokensBuilder.Templates
             LaterCalls.Call();
             Context.functionBuilder.generator.Emit(OpCodes.Brfalse, block);
             TokensBuilder.gen.ParseExpression(expr);
+            LaterCalls.BrEndIf();
             Context.functionBuilder.generator.MarkLabel(block);
             return errors;
         }

@@ -95,6 +95,7 @@ namespace TokensBuilder
             strongTemplates.Add(TokenType.BREAKPOINT, new BreakpointTemplate());
             strongTemplates.Add(TokenType.VAR, new VarTemplate());
             strongTemplates.Add(TokenType.IF, new IfTemplate());
+            strongTemplates.Add(TokenType.ELSE, new ElseTemplate());
             flexTemplates.Add(new CallMethodTemplate());
             flexTemplates.Add(new AssignTemplate());
             reader = new TokensReader();
