@@ -32,7 +32,7 @@ namespace TokensBuilder
         static List<bool> dontPops = new List<bool>();
         static List<MethodInfo> callMethods = new List<MethodInfo>();
         static List<ConstructorInfo> newObjects = new List<ConstructorInfo>();
-        public static Stack<Label> endIfLabels = new Stack<Label>();
+        public static Stack<Label> endIfElseLabels = new Stack<Label>(), endIfLabels = new Stack<Label>();
         public static bool brEndIf = false;
 
         /// <summary>
@@ -56,11 +56,20 @@ namespace TokensBuilder
             }
         }
 
-        public static void CallMethod(MethodInfo method, bool dontPop = true)
+        public static void CallMethod(MethodInfo method, bool dontPop = true, bool seek = false)
         {
-            orderCalls.Add(CallType.CallMethod);
-            callMethods.Add(method);
-            dontPops.Add(dontPop);
+            if (seek)
+            {
+                orderCalls.Insert(orderSk, CallType.CallMethod);
+                callMethods.Insert(callMtdSk, method);
+                dontPops.Insert(dontPopSk, dontPop);
+            }
+            else
+            {
+                orderCalls.Add(CallType.CallMethod);
+                callMethods.Add(method);
+                dontPops.Add(dontPop);
+            }
         }
 
         public static void LoadField(FieldInfo field, bool seek = false)
@@ -149,10 +158,17 @@ namespace TokensBuilder
             }
         }
 
-        public static void CreateEndIfLabel() =>
-            endIfLabels.Push(Context.functionBuilder.generator.DefineLabel());
+        public static void CreateEndIfLabel()
+        {
+            brEndIf = true;
+            endIfElseLabels.Push(Context.functionBuilder.generator.DefineLabel());
+        }
 
-        public static void BrEndIf() => orderCalls.Add(CallType.BrEndIf);
+        public static void BrEndIf(Label endIfLabel)
+        {
+            orderCalls.Add(CallType.BrEndIf);
+            endIfLabels.Push(endIfLabel);
+        }
         #endregion
 
         public static void Call()
@@ -187,10 +203,15 @@ namespace TokensBuilder
                         break;
                     case CallType.BrEndIf:
                         if (brEndIf)
-                            Context.functionBuilder.generator.Emit(OpCodes.Br, endIfLabels.Peek());
+                        {
+                            Context.functionBuilder.generator.Emit(OpCodes.Br, endIfElseLabels.Peek());
+                            Context.functionBuilder.generator.MarkLabel(endIfLabels.Pop());
+                        }
                         break;
                 }
             }
+            if (brEndIf)
+                Context.functionBuilder.generator.MarkLabel(endIfElseLabels.Pop()); // mark label there are
             orderCalls.Clear();
         }
 
@@ -251,6 +272,10 @@ namespace TokensBuilder
             else setLclSk = 0;
             if (!setFields.IsEmpty()) setFldSk = setFields.Count - 1;
             else setFldSk = 0;
+            if (!callMethods.IsEmpty()) callMtdSk = callMethods.Count - 1;
+            else callMtdSk = 0;
+            if (!dontPops.IsEmpty()) dontPopSk = dontPops.Count - 1;
+            else dontPopSk = 0;
         }
     }
 }

@@ -11,7 +11,7 @@ namespace TokensBuilder.Templates
         public bool Parse(TokensReader expression, bool expression_end)
         {
             expr = null;
-            if (expression.tokens.Pop() == TokenType.ELSE && expression.tokens.IsEmpty())
+            if (expression.tokens.Pop() == TokenType.ELSE)
             {
                 if (expression_end) expr = expression;
                 return true;
@@ -22,11 +22,11 @@ namespace TokensBuilder.Templates
         public List<TokensError> Run()
         {
             List<TokensError> errors = new List<TokensError>();
-            LaterCalls.brEndIf = true;
-            LaterCalls.CreateEndIfLabel();
+            TokensBuilder.gen.needLaterCall = false;
             TokensBuilder.gen.ParseExpression(expr);
-            Context.functionBuilder.generator.MarkLabel(LaterCalls.endIfLabels.Pop());
+            LaterCalls.CreateEndIfLabel();
             LaterCalls.Call();
+            LaterCalls.brEndIf = false;
             return errors;
         }
     }

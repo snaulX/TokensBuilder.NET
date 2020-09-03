@@ -17,7 +17,7 @@ namespace TokensBuilder
         public Dictionary<string, Action> directives = new Dictionary<string, Action>();
         public byte needEndBlock = 0;
         public List<TokensError> errors = new List<TokensError>();
-        public bool tryDirective = false;
+        public bool tryDirective = false, needLaterCall = true;
         public List<TokenType> tryTokens = new List<TokenType>();
         public Stack<int> tryPositions = new Stack<int>(), tryCounts = new Stack<int>(); // positions of 'try' tokens
         #endregion
@@ -206,7 +206,8 @@ namespace TokensBuilder
             }
             finally
             {
-                if (isFuncBody) LaterCalls.Call();
+                if (isFuncBody && needLaterCall) LaterCalls.Call();
+                needLaterCall = true;
             }
         }
 

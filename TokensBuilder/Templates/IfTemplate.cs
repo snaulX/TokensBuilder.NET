@@ -9,6 +9,7 @@ namespace TokensBuilder.Templates
     {
         Type statement;
         TokensReader expr = null;
+        private ILGenerator g => Context.functionBuilder.generator;
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
@@ -30,12 +31,12 @@ namespace TokensBuilder.Templates
         public List<TokensError> Run()
         {
             List<TokensError> errors = new List<TokensError>();
-            Label block = Context.functionBuilder.generator.DefineLabel();
-            LaterCalls.Call();
-            Context.functionBuilder.generator.Emit(OpCodes.Brfalse, block);
+            Label endBlock = Context.functionBuilder.generator.DefineLabel();
+            LaterCalls.Call(); // call statement
+            g.Emit(OpCodes.Brfalse, endBlock);
             TokensBuilder.gen.ParseExpression(expr);
-            LaterCalls.BrEndIf();
-            Context.functionBuilder.generator.MarkLabel(block);
+            LaterCalls.BrEndIf(endBlock);
+            TokensBuilder.gen.needLaterCall = false;
             return errors;
         }
     }
