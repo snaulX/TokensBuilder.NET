@@ -151,7 +151,13 @@ namespace TokensBuilder
                     if (!tryTokens.IsEmpty())
                     {
                         LaterCalls.RemoveLast();
-                        if (trypos < 0) trypos = tryPositions.Pop();
+                        if (trypos < 0)
+                        {
+                            if (tryPositions.IsEmpty()) // need to change text of error
+                                errors.Add(new InvalidTokensTemplateError(line, "tryPositions is empty"));
+                            else 
+                                trypos = tryPositions.Pop();
+                        }
                         expr.tokens.RemoveAt(trypos);
                         if (count == 0) count = tryCounts.Pop();
                         if (count > 0)
@@ -189,7 +195,13 @@ namespace TokensBuilder
                 if (!tryTokens.IsEmpty())
                 {
                     LaterCalls.RemoveLast();
-                    if (trypos < 0) trypos = tryPositions.Pop();
+                    if (trypos < 0)
+                    {
+                        if (tryPositions.IsEmpty()) // need to change text of error
+                            errors.Add(new InvalidTokensTemplateError(line, "tryPositions is empty"));
+                        else
+                            trypos = tryPositions.Pop();
+                    }
                     expr.tokens.RemoveAt(trypos);
                     if (count == 0) count = tryCounts.Pop();
                     if (count > 0)

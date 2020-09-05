@@ -205,8 +205,8 @@ namespace TokensBuilder
                         if (brEndIf)
                         {
                             Context.functionBuilder.generator.Emit(OpCodes.Br, endIfElseLabels.Peek());
-                            Context.functionBuilder.generator.MarkLabel(endIfLabels.Pop());
                         }
+                        Context.functionBuilder.generator.MarkLabel(endIfLabels.Pop());
                         break;
                 }
             }
