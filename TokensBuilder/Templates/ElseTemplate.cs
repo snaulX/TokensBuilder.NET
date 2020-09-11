@@ -6,13 +6,13 @@ namespace TokensBuilder.Templates
 {
     class ElseTemplate : TokensTemplate
     {
-        TokensReader expr = null;
+        TokensReader body = null;
         IfTemplate ift = new IfTemplate();
         bool haveIf = false;
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            expr = null;
+            body = null;
             haveIf = false;
             if (expression.tokens.Pop() == TokenType.ELSE)
             {
@@ -27,7 +27,7 @@ namespace TokensBuilder.Templates
                     }
                 }
                 finally { }
-                if (expression_end) expr = backup;
+                if (expression_end) body = backup;
                 return true;
             }
             else return false;
@@ -35,11 +35,11 @@ namespace TokensBuilder.Templates
 
         public List<TokensError> Run()
         {
+            TokensBuilder.gen.needLaterCall = false; // we will 'laterCall' in this method
             if (haveIf)
                 return ift.Run();
             List<TokensError> errors = new List<TokensError>();
-            TokensBuilder.gen.needLaterCall = false;
-            TokensBuilder.gen.ParseExpression(expr);
+            TokensBuilder.gen.ParseExpression(body); // parse body
             LaterCalls.CreateEndIfLabel();
             LaterCalls.Call();
             LaterCalls.brEndIf = false;

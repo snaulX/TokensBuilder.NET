@@ -8,19 +8,19 @@ namespace TokensBuilder.Templates
     public class IfTemplate : TokensTemplate
     {
         Type statement;
-        TokensReader expr = null;
+        TokensReader body = null;
         private ILGenerator g => Context.functionBuilder.generator;
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
-            expr = null;
+            body = null;
             TokenType token = expression.tokens.Pop();
             if (token == TokenType.IF)
             {
                 statement = PartTemplate.ParseStatement(ref expression);
                 if (expression_end)
                 {
-                    expr = expression;
+                    body = expression;
                 }
                 return true;
             }
@@ -31,11 +31,11 @@ namespace TokensBuilder.Templates
         public List<TokensError> Run()
         {
             List<TokensError> errors = new List<TokensError>();
+            //TokensBuilder.gen.needLaterCall = false;
             Label endBlock = Context.functionBuilder.generator.DefineLabel();
-            LaterCalls.Call(); // call statement
-            g.Emit(OpCodes.Brfalse, endBlock);
-            TokensBuilder.gen.ParseExpression(expr);
-            LaterCalls.BrEndIf(endBlock);
+            LaterCalls.Brfalse(endBlock);
+            TokensBuilder.gen.ParseExpression(body); // parse body
+            LaterCalls.BrEndIf();
             TokensBuilder.gen.needLaterCall = false;
             return errors;
         }

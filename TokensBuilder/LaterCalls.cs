@@ -16,7 +16,8 @@ namespace TokensBuilder
         SetLocal,
         LoadOperator,
         NewObject,
-        BrEndIf
+        BrEndIf,
+        Brfalse
     }
 
     public static class LaterCalls
@@ -164,9 +165,11 @@ namespace TokensBuilder
             endIfElseLabels.Push(Context.functionBuilder.generator.DefineLabel());
         }
 
-        public static void BrEndIf(Label endIfLabel)
+        public static void BrEndIf() => orderCalls.Add(CallType.BrEndIf);
+
+        public static void Brfalse(Label endIfLabel)
         {
-            orderCalls.Add(CallType.BrEndIf);
+            orderCalls.Add(CallType.Brfalse);
             endIfLabels.Push(endIfLabel);
         }
         #endregion
@@ -207,6 +210,9 @@ namespace TokensBuilder
                             Context.functionBuilder.generator.Emit(OpCodes.Br, endIfElseLabels.Peek());
                         }
                         Context.functionBuilder.generator.MarkLabel(endIfLabels.Pop());
+                        break;
+                    case CallType.Brfalse:
+                        Context.functionBuilder.generator.Emit(OpCodes.Brfalse, endIfLabels.Peek());
                         break;
                 }
             }
