@@ -37,6 +37,7 @@ namespace TokensBuilder.Templates
             library.GetHeaderAndTarget(out _, out _);
             library.ReadTokens();
             library.EndWork();
+            TokensBuilder.gen.reader.Add(library);
             return errors;
         }
     }

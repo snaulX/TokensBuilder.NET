@@ -112,6 +112,7 @@ namespace TokensBuilder
                 TakeExpression();
                 ParseExpression(expression);
             }
+            errors.AddRange(PartTemplate.errors);
             foreach (TokensError error in errors)
                 Console.Error.WriteLine(error);
         }
@@ -329,7 +330,7 @@ namespace TokensBuilder
             reader.tokens.RemoveRange(0, pos);
         }
 
-        public int ParseDirective(int pos)
+        private int ParseDirective(int pos)
         {
             if (reader.tokens[pos] == TokenType.LITERAL)
             {

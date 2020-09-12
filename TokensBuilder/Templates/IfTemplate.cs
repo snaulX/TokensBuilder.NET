@@ -31,7 +31,7 @@ namespace TokensBuilder.Templates
         public List<TokensError> Run()
         {
             List<TokensError> errors = new List<TokensError>();
-            //TokensBuilder.gen.needLaterCall = false;
+            TokensBuilder.gen.needLaterCall = false;
             Label endBlock = Context.functionBuilder.generator.DefineLabel();
             LaterCalls.Brfalse(endBlock);
             TokensBuilder.gen.ParseExpression(body); // parse body

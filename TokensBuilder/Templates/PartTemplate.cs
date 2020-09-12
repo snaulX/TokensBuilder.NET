@@ -371,8 +371,6 @@ namespace TokensBuilder.Templates
                         break;
                 }
             }
-            TokensBuilder.gen.errors.AddRange(errors);
-            errors.Clear();
             return type;
         }
     }
