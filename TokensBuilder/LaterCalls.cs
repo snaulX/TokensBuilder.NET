@@ -34,7 +34,7 @@ namespace TokensBuilder
         static List<MethodInfo> callMethods = new List<MethodInfo>();
         static List<ConstructorInfo> newObjects = new List<ConstructorInfo>();
         public static Stack<Label> endIfElseLabels = new Stack<Label>(), endIfLabels = new Stack<Label>();
-        public static bool brEndIf = false;
+        public static bool brEndIf = false, isLoop = false;
 
         /// <summary>
         /// Seek
@@ -171,6 +171,14 @@ namespace TokensBuilder
         {
             orderCalls.Add(CallType.Brfalse);
             endIfLabels.Push(endIfLabel);
+        }
+
+        public static void StartLoop()
+        {
+            Label startLabel = Context.functionBuilder.generator.DefineLabel();
+            Context.functionBuilder.generator.MarkLabel(startLabel);
+            endIfElseLabels.Push(startLabel);
+            brEndIf = true;
         }
         #endregion
 

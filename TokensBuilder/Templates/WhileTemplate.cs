@@ -5,16 +5,18 @@ using TokensAPI;
 
 namespace TokensBuilder.Templates
 {
-    public class IfTemplate : TokensTemplate
+    public class WhileTemplate : TokensTemplate
     {
         Type statement;
         TokensReader body = null;
+        ILGenerator g => Context.functionBuilder.generator;
 
         public bool Parse(TokensReader expression, bool expression_end)
         {
             body = null;
             TokenType token = expression.tokens.Pop();
-            if (token == TokenType.IF)
+            LoopType loopType = expression.loops.Pop();
+            if (token == TokenType.LOOP && loopType == LoopType.WHILE)
             {
                 statement = PartTemplate.ParseStatement(ref expression);
                 if (expression_end)
@@ -31,11 +33,12 @@ namespace TokensBuilder.Templates
         {
             List<TokensError> errors = new List<TokensError>();
             TokensBuilder.gen.needLaterCall = false;
-            Label endBlock = Context.functionBuilder.generator.DefineLabel();
+            Label endBlock = g.DefineLabel();
+            LaterCalls.StartLoop();
             LaterCalls.Brfalse(endBlock);
             TokensBuilder.gen.ParseExpression(body); // parse body
             LaterCalls.BrEndIf();
-            TokensBuilder.gen.needLaterCall = false;
+            g.MarkLabel(endBlock);
             return errors;
         }
     }

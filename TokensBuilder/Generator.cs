@@ -98,6 +98,7 @@ namespace TokensBuilder
             strongTemplates.Add(TokenType.ELSE, new ElseTemplate());
             flexTemplates.Add(new CallMethodTemplate());
             flexTemplates.Add(new AssignTemplate());
+            flexTemplates.Add(new WhileTemplate());
             reader = new TokensReader();
         }
 

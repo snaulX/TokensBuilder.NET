@@ -84,6 +84,7 @@
     <Compile Include="Templates\PartTemplate.cs" />
     <Compile Include="Templates\UseTemplate.cs" />
     <Compile Include="Templates\VarTemplate.cs" />
+    <Compile Include="Templates\WhileTemplate.cs" />
     <Compile Include="TokensTemplate.cs" />
     <Compile Include="TokensBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
