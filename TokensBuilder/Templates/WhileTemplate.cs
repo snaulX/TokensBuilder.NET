@@ -34,11 +34,12 @@ namespace TokensBuilder.Templates
             List<TokensError> errors = new List<TokensError>();
             TokensBuilder.gen.needLaterCall = false;
             Label endBlock = g.DefineLabel();
-            LaterCalls.StartLoop();
-            LaterCalls.Brfalse(endBlock);
-            TokensBuilder.gen.ParseExpression(body); // parse body
-            LaterCalls.BrEndIf();
-            g.MarkLabel(endBlock);
+            LaterCalls.StartLoop(); // initilizate start of loop
+            LaterCalls.Brfalse(endBlock); // make statement that points to end of loop |
+            TokensBuilder.gen.ParseExpression(body); // parse body                     |
+            LaterCalls.BrEndIf(); // make break to start of loop and mark end of loop <-
+            LaterCalls.Call(); // call all that we write here
+            LaterCalls.isLoop = false; // mark that we heven`t loop now
             return errors;
         }
     }

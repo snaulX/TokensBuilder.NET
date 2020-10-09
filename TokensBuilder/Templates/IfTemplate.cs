@@ -32,9 +32,9 @@ namespace TokensBuilder.Templates
             List<TokensError> errors = new List<TokensError>();
             TokensBuilder.gen.needLaterCall = false;
             Label endBlock = Context.functionBuilder.generator.DefineLabel();
-            LaterCalls.Brfalse(endBlock);
+            LaterCalls.Brfalse(endBlock); // create statement
             TokensBuilder.gen.ParseExpression(body); // parse body
-            LaterCalls.BrEndIf();
+            LaterCalls.BrEndIf(); // break to end of all if-else
             TokensBuilder.gen.needLaterCall = false;
             return errors;
         }

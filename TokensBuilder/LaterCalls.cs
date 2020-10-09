@@ -22,7 +22,7 @@ namespace TokensBuilder
 
     public static class LaterCalls
     {
-        static List<CallType> orderCalls = new List<CallType>();
+        static List<CallType> queueCalls = new List<CallType>();
         static List<FieldInfo> loadFields = new List<FieldInfo>(),
             setFields = new List<FieldInfo>();
         static List<LocalBuilder> loadLocals = new List<LocalBuilder>(),
@@ -37,22 +37,24 @@ namespace TokensBuilder
         public static bool brEndIf = false, isLoop = false;
 
         /// <summary>
-        /// Seek
+        /// Seek. Suffix Sk means that is seek on something
         /// </summary>
         static int orderSk = 0, loadFldSk = 0, setFldSk = 0, loadLclSk = 0, setLclSk = 0, loadObjSk = 0, loadCTOSk = 0,
             loadOpSk = 0, dontPopSk = 0, callMtdSk = 0, newObjSk = 0;
+
+        private static ILGenerator gen => Context.functionBuilder.generator;
 
         #region Operations
         public static void LoadObject(object value, bool seek = false)
         {
             if (seek)
             {
-                orderCalls.Insert(orderSk, CallType.LoadObject);
+                queueCalls.Insert(orderSk, CallType.LoadObject);
                 loadObjects.Insert(loadObjSk, value);
             }
             else
             {
-                orderCalls.Add(CallType.LoadObject);
+                queueCalls.Add(CallType.LoadObject);
                 loadObjects.Add(value);
             }
         }
@@ -61,13 +63,13 @@ namespace TokensBuilder
         {
             if (seek)
             {
-                orderCalls.Insert(orderSk, CallType.CallMethod);
+                queueCalls.Insert(orderSk, CallType.CallMethod);
                 callMethods.Insert(callMtdSk, method);
                 dontPops.Insert(dontPopSk, dontPop);
             }
             else
             {
-                orderCalls.Add(CallType.CallMethod);
+                queueCalls.Add(CallType.CallMethod);
                 callMethods.Add(method);
                 dontPops.Add(dontPop);
             }
@@ -77,12 +79,12 @@ namespace TokensBuilder
         {
             if (seek)
             {
-                orderCalls.Insert(orderSk, CallType.LoadField);
+                queueCalls.Insert(orderSk, CallType.LoadField);
                 loadFields.Insert(loadFldSk, field);
             }
             else
             {
-                orderCalls.Add(CallType.LoadField);
+                queueCalls.Add(CallType.LoadField);
                 loadFields.Add(field);
             }
         }
@@ -91,12 +93,12 @@ namespace TokensBuilder
         {
             if (seek)
             {
-                orderCalls.Insert(0, CallType.SetField);
+                queueCalls.Insert(0, CallType.SetField);
                 setFields.Insert(0, field);
             }
             else 
             { 
-                orderCalls.Add(CallType.SetField);
+                queueCalls.Add(CallType.SetField);
                 setFields.Add(field);
             }
         }
@@ -105,12 +107,12 @@ namespace TokensBuilder
         {
             if (seek)
             {
-                orderCalls.Insert(orderSk, CallType.LoadLocal);
+                queueCalls.Insert(orderSk, CallType.LoadLocal);
                 loadLocals.Insert(loadLclSk, local);
             }
             else
             {
-                orderCalls.Add(CallType.LoadLocal);
+                queueCalls.Add(CallType.LoadLocal);
                 loadLocals.Add(local);
             }
         }
@@ -119,12 +121,12 @@ namespace TokensBuilder
         {
             if (seek)
             {
-                orderCalls.Insert(orderSk, CallType.SetLocal);
+                queueCalls.Insert(orderSk, CallType.SetLocal);
                 setLocals.Insert(setLclSk, local);
             }
             else
             {
-                orderCalls.Add(CallType.SetLocal);
+                queueCalls.Add(CallType.SetLocal);
                 setLocals.Add(local);
             }
         }
@@ -133,13 +135,13 @@ namespace TokensBuilder
         {
             if (seek)
             {
-                orderCalls.Insert(orderSk, CallType.LoadOperator);
+                queueCalls.Insert(orderSk, CallType.LoadOperator);
                 loadCallerTypesOperators.Insert(loadCTOSk, callerType);
                 loadOperators.Insert(loadOpSk, op);
             }
             else
             {
-                orderCalls.Add(CallType.LoadOperator);
+                queueCalls.Add(CallType.LoadOperator);
                 loadCallerTypesOperators.Add(callerType);
                 loadOperators.Add(op);
             }
@@ -149,42 +151,44 @@ namespace TokensBuilder
         {
             if (seek)
             {
-                orderCalls.Insert(orderSk, CallType.NewObject);
+                queueCalls.Insert(orderSk, CallType.NewObject);
                 newObjects.Insert(newObjSk, ctor);
             }
             else
             {
-                orderCalls.Add(CallType.NewObject);
+                queueCalls.Add(CallType.NewObject);
                 newObjects.Add(ctor);
             }
         }
+        #endregion
 
+        #region Utility methods (create ifs, loops and etc.)
         public static void CreateEndIfLabel()
         {
             brEndIf = true;
-            endIfElseLabels.Push(Context.functionBuilder.generator.DefineLabel());
+            endIfElseLabels.Push(gen.DefineLabel());
         }
 
-        public static void BrEndIf() => orderCalls.Add(CallType.BrEndIf);
+        public static void BrEndIf() => queueCalls.Add(CallType.BrEndIf);
 
         public static void Brfalse(Label endIfLabel)
         {
-            orderCalls.Add(CallType.Brfalse);
+            queueCalls.Add(CallType.Brfalse);
             endIfLabels.Push(endIfLabel);
         }
 
         public static void StartLoop()
         {
-            Label startLabel = Context.functionBuilder.generator.DefineLabel();
-            Context.functionBuilder.generator.MarkLabel(startLabel);
+            Label startLabel = gen.DefineLabel();
+            gen.MarkLabel(startLabel);
             endIfElseLabels.Push(startLabel);
-            brEndIf = true;
+            isLoop = true;
         }
         #endregion
 
         public static void Call()
         {
-            foreach (CallType callType in orderCalls)
+            foreach (CallType callType in queueCalls)
             {
                 switch (callType)
                 {
@@ -213,27 +217,27 @@ namespace TokensBuilder
                         Context.NewObject(newObjects.Pop());
                         break;
                     case CallType.BrEndIf:
-                        if (brEndIf)
+                        if (brEndIf || isLoop)
                         {
-                            Context.functionBuilder.generator.Emit(OpCodes.Br, endIfElseLabels.Peek());
+                            gen.Emit(OpCodes.Br, endIfElseLabels.Peek());
                         }
-                        Context.functionBuilder.generator.MarkLabel(endIfLabels.Pop());
+                        gen.MarkLabel(endIfLabels.Pop());
                         break;
                     case CallType.Brfalse:
-                        Context.functionBuilder.generator.Emit(OpCodes.Brfalse, endIfLabels.Peek());
+                        gen.Emit(OpCodes.Brfalse, endIfLabels.Peek());
                         break;
                 }
             }
             if (brEndIf)
-                Context.functionBuilder.generator.MarkLabel(endIfElseLabels.Pop()); // mark label there are
-            orderCalls.Clear();
+                gen.MarkLabel(endIfElseLabels.Pop()); // mark label there are
+            queueCalls.Clear();
         }
 
         public static void RemoveLast()
         {
-            if (!orderCalls.IsEmpty())
+            if (!queueCalls.IsEmpty())
             {
-                switch (orderCalls.RemoveLast())
+                switch (queueCalls.RemoveLast())
                 {
                     case CallType.LoadObject:
                         loadObjects.RemoveLast();
@@ -267,7 +271,7 @@ namespace TokensBuilder
 
         public static void Seek()
         {
-            if (!orderCalls.IsEmpty()) orderSk = orderCalls.Count - 1;
+            if (!queueCalls.IsEmpty()) orderSk = queueCalls.Count - 1;
             else orderSk = 0;
             if (!loadLocals.IsEmpty()) loadLclSk = loadLocals.Count - 1;
             else loadLclSk = 0;
