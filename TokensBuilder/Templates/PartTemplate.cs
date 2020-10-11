@@ -244,7 +244,7 @@ namespace TokensBuilder.Templates
                 TokensReader backup = new TokensReader();
                 backup.Add(expression);
                 MethodInfo method = ParseCallMethod(ref expression);
-                if (method == null)
+                if (method == null) // is local
                 {
                     expression = backup;
                     LocalBuilder local = ParseLocal(ref expression);

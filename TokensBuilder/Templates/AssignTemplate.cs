@@ -50,7 +50,7 @@ namespace TokensBuilder.Templates
             List<TokensError> errors = new List<TokensError>();
             if (local == null) // is field
             {
-                if (field.FieldType == valuetype)
+                if (field.FieldType.IsAssignableFrom(valuetype))
                     LaterCalls.SetField(field);
                 else
                     errors.Add(new InvalidTypeError(TokensBuilder.gen.line,
@@ -58,10 +58,8 @@ namespace TokensBuilder.Templates
             }
             else // is local
             {
-                if (local.LocalType == valuetype)
-                {
+                if (local.LocalType.IsAssignableFrom(valuetype))
                     LaterCalls.SetLocal(local);
-                }
                 else
                     errors.Add(new InvalidTypeError(TokensBuilder.gen.line,
                         $"Type of value {valuetype} not equals type of getted local {local.LocalType} for assign"));

@@ -155,8 +155,12 @@ namespace TokensBuilder
                         LaterCalls.RemoveLast();
                         if (trypos < 0)
                         {
-                            if (tryPositions.IsEmpty()) // need to change text of error
+                            if (tryPositions.IsEmpty()) // TODO: need to change text of error
+                            {
                                 errors.Add(new InvalidTokensTemplateError(line, "tryPositions is empty"));
+                                tryTokens.Clear(); // сделаем это для того, чтобы эта ошибка не повторялась
+                                return; // беспричинно и не было исключений (переведите на английский пж)
+                            }
                             else 
                                 trypos = tryPositions.Pop();
                         }
@@ -199,8 +203,12 @@ namespace TokensBuilder
                     LaterCalls.RemoveLast();
                     if (trypos < 0)
                     {
-                        if (tryPositions.IsEmpty()) // need to change text of error
+                        if (tryPositions.IsEmpty()) // TODO: need to change text of error
+                        {
                             errors.Add(new InvalidTokensTemplateError(line, "tryPositions is empty"));
+                            tryTokens.Clear(); // сделаем это для того, чтобы эта ошибка не повторялась
+                            return; // беспричинно и не было исключений (переведите на английский пж)
+                        }
                         else
                             trypos = tryPositions.Pop();
                     }
@@ -222,6 +230,7 @@ namespace TokensBuilder
             {
                 if (isFuncBody && needLaterCall) LaterCalls.Call();
                 needLaterCall = true;
+                tryTokens.Clear();
             }
         }
 
