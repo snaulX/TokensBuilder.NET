@@ -131,6 +131,64 @@ namespace TokensBuilder.Templates
                 return null;
         }
 
+        public static Type ParseNewObject(ref TokensReader expression)
+        {
+            string ctorName = ParseLiterals(ref expression);
+            if (ctorName != null)
+            {
+                Type type = Context.GetTypeByName(ctorName);
+                TokenType token = expression.tokens.Pop();
+                if (token == TokenType.STATEMENT)
+                {
+                    if (expression.bool_values.Pop())
+                    {
+                        token = expression.tokens.Pop();
+                        if (token == TokenType.STATEMENT && !expression.bool_values.Pop()) // empty arguments
+                        {
+                            LaterCalls.NewObject(type.GetConstructor(Type.EmptyTypes));
+                            return type;
+                        }
+                        else
+                        {
+                            expression.tokens.Insert(0, token);
+                            List<Type> paramTypes = new List<Type>();
+                            parse_param:
+                            Type paramType = ParseValue(ref expression);
+                            if (paramType == null)
+                                return null;
+                            else
+                            {
+                                paramTypes.Add(paramType);
+                                token = expression.tokens.Pop();
+                                if (token == TokenType.STATEMENT)
+                                {
+                                    if (!expression.bool_values.Pop())
+                                    {
+                                        LaterCalls.NewObject(type.GetConstructor(paramTypes.ToArray()));
+                                        return type;
+                                    }
+                                    else
+                                        expression.bool_values.Insert(0, true);
+                                }
+                                else if (token == TokenType.SEPARATOR && !expression.bool_values.Pop())
+                                    goto parse_param;
+                                else
+                                    return null;
+                            }
+                            return null;
+                        }
+                    }
+                    else
+                        errors.Add(new InvalidTokenError(
+                            line, $"After constructor name must stay open statement (not close)"));
+                }
+                else
+                    errors.Add(new InvalidTokenError(
+                        line, $"After constructor name must stay open statement (not {token})"));
+            }
+            return null;
+        }
+
         public static string ParseLiterals(ref TokensReader expression)
         {
             TokenType token = expression.tokens.Pop();
@@ -266,59 +324,7 @@ namespace TokensBuilder.Templates
             }
             else if (token == TokenType.NEW)
             {
-                string ctorName = ParseLiterals(ref expression);
-                if (ctorName != null)
-                {
-                    type = Context.GetTypeByName(ctorName);
-                    token = expression.tokens.Pop();
-                    if (token == TokenType.STATEMENT)
-                    {
-                        if (expression.bool_values.Pop())
-                        {
-                            token = expression.tokens.Pop();
-                            if (token == TokenType.STATEMENT && !expression.bool_values.Pop()) // empty arguments
-                            {
-                                LaterCalls.NewObject(type.GetConstructor(Type.EmptyTypes));
-                                return type;
-                            }
-                            else
-                            {
-                                expression.tokens.Insert(0, token);
-                                List<Type> paramTypes = new List<Type>();
-                                parse_param:
-                                Type paramType = ParseValue(ref expression);
-                                if (paramType == null)
-                                    return null;
-                                else
-                                {
-                                    paramTypes.Add(paramType);
-                                    token = expression.tokens.Pop();
-                                    if (token == TokenType.STATEMENT)
-                                    {
-                                        if (!expression.bool_values.Pop())
-                                        {
-                                            LaterCalls.NewObject(type.GetConstructor(paramTypes.ToArray()));
-                                            return type;
-                                        }
-                                        else
-                                            expression.bool_values.Insert(0, true);
-                                    }
-                                    else if (token == TokenType.SEPARATOR && !expression.bool_values.Pop())
-                                        goto parse_param;
-                                    else
-                                        return null;
-                                }
-                                return null;
-                            }
-                        }
-                        else
-                            errors.Add(new InvalidTokenError(
-                                line, $"After constructor name must stay open statement (not close)"));
-                    }
-                    else
-                        errors.Add(new InvalidTokenError(
-                            line, $"After constructor name must stay open statement (not {token})"));
-                }
+                type = ParseNewObject(ref expression);
             }
             else if (token == TokenType.STATEMENT)
             {
